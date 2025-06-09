@@ -1,0 +1,1 @@
+package qwen.chat.platform.infrastructure.adapter.repository;
