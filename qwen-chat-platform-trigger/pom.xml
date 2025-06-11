@@ -17,4 +17,26 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+
+
+        <!-- 系统模块 -->
+        <dependency>
+            <groupId>top.xiaoming-programming</groupId>
+            <artifactId>qwen-chat-platform-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>top.xiaoming-programming</groupId>
+            <artifactId>qwen-chat-platform-domain</artifactId>
+        </dependency>
+    </dependencies>
+
 </project>
