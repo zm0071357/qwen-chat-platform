@@ -4,8 +4,8 @@ server:
 spring:
   # 数据库配置；启动时配置数据库资源信息
   datasource:
-    username: root
-    password: qwaszx134137
+    username:
+    password:
     url: jdbc:mysql://127.0.0.1:3306/qwen-chat-platform?useUnicode=true&characterEncoding=utf8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&serverTimezone=Asia/Shanghai&useSSL=true
     driver-class-name: com.mysql.cj.jdbc.Driver
 
@@ -29,6 +29,32 @@ sa-token:
   token-style: uuid
   # 是否输出操作日志
   is-log: true
+
+# 通义千问配置
+qwen:
+  sdk:
+    config:
+      enable: true
+      api-key:
+      analysis_video_url: "https://www.hhlqilongzhu.cn"
+
+# Http客户端配置
+okhttpclient:
+  config:
+    connectTimeOut: 60
+    writeTimeOut: 60
+    readTimeOut: 60
+
+# 线程池配置
+thread:
+  pool:
+    executor:
+      config:
+        core-pool-size: 20
+        max-pool-size: 50
+        keep-alive-time: 5000
+        block-queue-size: 5000
+        policy: CallerRunsPolicy
 
 # 日志
 logging:
