@@ -12,13 +12,16 @@ import qwen.chat.platform.domain.login.UserService;
 import qwen.chat.platform.domain.qwen.QwenService;
 import qwen.chat.platform.domain.qwen.model.entity.MessageEntity;
 import qwen.chat.platform.domain.qwen.model.valobj.ChatResultEnum;
+import qwen.chat.platform.domain.qwen.model.valobj.FileTypeEnum;
 import qwen.chat.platform.domain.qwen.model.valobj.MessageTypeEnum;
 import qwen.chat.platform.domain.qwen.model.valobj.UploadFileResultEnum;
 import qwen.chat.platform.types.utils.AliOSSUtils;
 
 import javax.annotation.Resource;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/chat")
@@ -43,17 +46,18 @@ public class ChatController implements ChatService {
         String content = chatRequestDTO.getContent();
         Integer msgType = chatRequestDTO.getMsgType();
         String historyCode = chatRequestDTO.getHistoryCode();
-        List<String> file = chatRequestDTO.getFile();
+        List<String> fileList = chatRequestDTO.getFile();
         boolean think = chatRequestDTO.isThink();
         boolean search = chatRequestDTO.isSearch();
         // 参数校验
         ResponseBodyEmitter emitter = new ResponseBodyEmitter(3 * 60 * 1000L);
-        if (userId == null || msgType == null || historyCode == null || (content == null && (file == null || file.isEmpty()))) {
+        if (userId == null || msgType == null || historyCode == null || (content == null && (fileList == null || fileList.isEmpty()))) {
             emitter.onError(throwable -> log.error(ChatResultEnum.NULL_PARAMETER.getInfo(), throwable));
         }
-        if (file != null && search) {
+        if (fileList != null && search) {
             emitter.onError(throwable -> log.error(ChatResultEnum.EXIST_FILE_SEARCH.getInfo(), throwable));
         }
+
         // 请求
         MessageEntity messageEntity = MessageEntity.builder()
                 .userId(userId)
@@ -62,8 +66,8 @@ public class ChatController implements ChatService {
                 .think(think)
                 .search(search)
                 .build();
-        messageEntity.setMsgType(file == null ? MessageTypeEnum.TEXT.getMsgType() : MessageTypeEnum.FILE.getMsgType());
-        messageEntity.setFileList(file);
+        messageEntity.setMsgType(fileList == null ? MessageTypeEnum.TEXT.getMsgType() : MessageTypeEnum.FILE.getMsgType());
+        messageEntity.setFileList(fileList);
         // 大模型处理
         return qwenService.handle(messageEntity);
     }

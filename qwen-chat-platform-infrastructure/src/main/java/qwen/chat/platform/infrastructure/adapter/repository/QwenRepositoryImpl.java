@@ -28,10 +28,7 @@ import retrofit2.Response;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
@@ -54,20 +51,27 @@ public class QwenRepositoryImpl implements QwenRepository {
     @PostConstruct
     private void init() {
         // 初始化
-        fileMap.put(FileTypeEnum.IMAGE, this::createImageMessage);
+        fileMap.put(FileTypeEnum.IMAGE, entity -> Collections.singletonList(createImageMessage(entity.getFile())));
+        fileMap.put(FileTypeEnum.AUDIO, entity -> Collections.singletonList(createAudioMessage(entity.getFile())));
+        fileMap.put(FileTypeEnum.VIDEO, entity -> Collections.singletonList(createVideoMessage(entity.getFile())));
     }
 
-    private List<ChatRequest.Input.Message.Content> createImageMessage(MessageContentEntity messageContentEntity) {
-        String file = messageContentEntity.getFile();
-        String content = messageContentEntity.getContent();
-        List<ChatRequest.Input.Message.Content> userContent = new ArrayList<>();
-        userContent.add(ChatRequest.Input.Message.Content.builder()
+    private ChatRequest.Input.Message.Content createAudioMessage(String file) {
+        return ChatRequest.Input.Message.Content.builder()
+                .audio(file)
+                .build();
+    }
+
+    private ChatRequest.Input.Message.Content createVideoMessage(String file) {
+        return ChatRequest.Input.Message.Content.builder()
+                .video(file)
+                .build();
+    }
+
+    private ChatRequest.Input.Message.Content createImageMessage(String file) {
+        return ChatRequest.Input.Message.Content.builder()
                 .image(file)
-                .build());
-        userContent.add(ChatRequest.Input.Message.Content.builder()
-                .text(content != null ? content : MessageConstant.DES_IMAGE_MESSAGE)
-                .build());
-        return userContent;
+                .build();
     }
 
     @Override
@@ -98,11 +102,6 @@ public class QwenRepositoryImpl implements QwenRepository {
         userContent.add(ChatRequest.Input.Message.Content.builder()
                 .text(content)
                 .build());
-        // 构造参数
-        messages.add(ChatRequest.Input.Message.builder()
-                .role(RoleConstant.USER)
-                .content(userContent)
-                .build());
         return this.handle(messages, search, historyCode, userId, true);
     }
 
@@ -129,26 +128,45 @@ public class QwenRepositoryImpl implements QwenRepository {
     public ResponseBodyEmitter chatWithFile(List<ChatRequest.Input.Message> messages, MessageEntity messageEntity) {
         List<String> fileList = messageEntity.getFileList();
         boolean isSaveHistory = true;
+        Set<FileTypeEnum> mediaTypes = new HashSet<>();
+        for (String file : messageEntity.getFileList()) {
+            FileTypeEnum fileType = messageEntity.fileType(file);
+            if (fileType == FileTypeEnum.IMAGE || fileType == FileTypeEnum.AUDIO || fileType == FileTypeEnum.VIDEO) {
+                mediaTypes.add(fileType);
+            }
+        }
+        if (mediaTypes.size() > 1) {
+            log.info("文件类型超过2种");
+            return this.handleWrong();
+        }
+        // 获取
+        List<ChatRequest.Input.Message.Content> userContent = new ArrayList<>();
         for (String file : fileList) {
             FileTypeEnum fileTypeEnum = messageEntity.fileType(file);
-            if (fileTypeEnum.getFileType().equals(FileTypeEnum.VIDEO.getFileType()) || fileTypeEnum.getFileType().equals(FileTypeEnum.UNKNOWN.getFileType())) {
+            if (fileTypeEnum == FileTypeEnum.VIDEO || fileTypeEnum == FileTypeEnum.UNKNOWN) {
                 isSaveHistory = false;
             }
+
             Function<MessageContentEntity, List<ChatRequest.Input.Message.Content>> handler = fileMap.get(fileTypeEnum);
-            List<ChatRequest.Input.Message.Content> userContent = handler.apply(MessageContentEntity.builder()
+            userContent.addAll(handler.apply(MessageContentEntity.builder()
                     .file(file)
                     .content(messageEntity.getContent())
-                    .build());
-            messages.add(ChatRequest.Input.Message.builder()
-                    .role(RoleConstant.USER)
-                    .content(userContent)
-                    .build());
+                    .build()));
         }
+        userContent.add(ChatRequest.Input.Message.Content.builder()
+                .text(messageEntity.getContent() != null ? messageEntity.getContent() : MessageConstant.DES_FILE_MESSAGE)
+                .build());
+        // 构造参数
+        messages.add(ChatRequest.Input.Message.builder()
+                .role(RoleConstant.USER)
+                .content(userContent)
+                .build());
         return this.handle(messages, messageEntity.isSearch(), messageEntity.getHistoryCode(), messageEntity.getUserId(), isSaveHistory);
     }
 
     /**
      * 获取在线视频链接
+     *
      * @param link
      * @return
      */
@@ -268,4 +286,15 @@ public class QwenRepositoryImpl implements QwenRepository {
         return emitter;
     }
 
+
+    private ResponseBodyEmitter handleWrong() {
+        ResponseBodyEmitter emitter = new ResponseBodyEmitter(10 * 60 * 1000L);
+        try {
+            emitter.send(MessageConstant.VARIOUS_FILES_MESSAGE);
+            emitter.complete();
+            return emitter;
+        } catch (IOException e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
 }

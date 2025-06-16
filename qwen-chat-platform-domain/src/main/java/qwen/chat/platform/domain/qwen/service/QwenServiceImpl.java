@@ -6,7 +6,6 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter
 import qwen.chat.platform.domain.qwen.DefaultQwenService;
 import qwen.chat.platform.domain.qwen.adapter.repository.QwenRepository;
 import qwen.chat.platform.domain.qwen.model.entity.MessageEntity;
-import qwen.chat.platform.domain.qwen.model.valobj.File;
 import qwen.sdk.largemodel.chat.model.ChatRequest;
 
 import javax.annotation.Resource;
@@ -23,7 +22,7 @@ public class QwenServiceImpl extends DefaultQwenService {
     protected ResponseBodyEmitter handleFileMessage(MessageEntity messageEntity) {
         String historyCode = messageEntity.getHistoryCode();
         String userId = messageEntity.getUserId();
-        // 获取历史记录
+        // 历史记录
         List<ChatRequest.Input.Message> messages = qwenRepository.getHistory(userId, historyCode);
         return qwenRepository.chatWithFile(messages, messageEntity);
     }
