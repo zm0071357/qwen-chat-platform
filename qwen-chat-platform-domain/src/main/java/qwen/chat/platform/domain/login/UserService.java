@@ -19,4 +19,11 @@ public interface UserService {
      * @return
      */
     LoginResultEntity loginByAcc(LoginByAccEntity loginByAccEntity);
+
+    /**
+     * 判断用户是否存在
+     * @param userId
+     * @return
+     */
+    boolean checkUserIsExist(String userId);
 }

@@ -6,11 +6,10 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter
 import qwen.chat.platform.domain.qwen.DefaultQwenService;
 import qwen.chat.platform.domain.qwen.adapter.repository.QwenRepository;
 import qwen.chat.platform.domain.qwen.model.entity.MessageEntity;
-import qwen.chat.platform.domain.qwen.model.valobj.RoleConstant;
+import qwen.chat.platform.domain.qwen.model.valobj.File;
 import qwen.sdk.largemodel.chat.model.ChatRequest;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -22,7 +21,11 @@ public class QwenServiceImpl extends DefaultQwenService {
 
     @Override
     protected ResponseBodyEmitter handleFileMessage(MessageEntity messageEntity) {
-        return null;
+        String historyCode = messageEntity.getHistoryCode();
+        String userId = messageEntity.getUserId();
+        // 获取历史记录
+        List<ChatRequest.Input.Message> messages = qwenRepository.getHistory(userId, historyCode);
+        return qwenRepository.chatWithFile(messages, messageEntity);
     }
 
     @Override
@@ -40,6 +43,5 @@ public class QwenServiceImpl extends DefaultQwenService {
         // 普通文本
         return qwenRepository.chat(messages, content, search, historyCode, userId);
     }
-
 
 }

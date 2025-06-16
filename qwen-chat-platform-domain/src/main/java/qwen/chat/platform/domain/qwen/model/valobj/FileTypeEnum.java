@@ -11,7 +11,8 @@ public enum FileTypeEnum {
 
     IMAGE(1, "图片"),
     VIDEO(2, "视频"),
-    DOCUMENT(3, "文档 - EXCEL、PDE等"),
+    DOCUMENT(3, "文档 - EXCEL、PDF等"),
+    UNKNOWN(4, "未知类型"),
     ;
 
     private Integer fileType;

@@ -20,4 +20,10 @@ public interface UserRepository {
      */
      boolean loginByAcc(LoginByAccEntity loginByAccEntity);
 
+    /**
+     * 查询记录数
+     * @param userId
+     * @return
+     */
+    int checkUserIsExist(String userId);
 }

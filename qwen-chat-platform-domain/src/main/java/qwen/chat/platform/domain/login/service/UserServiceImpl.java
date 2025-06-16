@@ -57,4 +57,10 @@ public class UserServiceImpl implements UserService {
                 .isSuccess(false)
                 .build();
     }
+
+    @Override
+    public boolean checkUserIsExist(String userId) {
+        int count = userRepository.checkUserIsExist(userId);
+        return count > 0;
+    }
 }

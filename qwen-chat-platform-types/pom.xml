@@ -30,6 +30,10 @@
             <groupId>de.mkammerer</groupId>
             <artifactId>argon2-jvm</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

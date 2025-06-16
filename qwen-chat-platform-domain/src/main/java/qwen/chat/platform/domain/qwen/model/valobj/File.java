@@ -4,6 +4,5 @@ import lombok.Getter;
 
 @Getter
 public class File {
-    private String filename;
-    private Integer filetype;
+    private String url;
 }

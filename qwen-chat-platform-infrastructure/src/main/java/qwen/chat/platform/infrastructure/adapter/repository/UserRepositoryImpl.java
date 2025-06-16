@@ -63,4 +63,13 @@ public class UserRepositoryImpl implements UserRepository {
         String hashPassword = user.getPassword();
         return agronUtils.verifyPassword(hashPassword, password);
     }
+
+    @Override
+    public int checkUserIsExist(String userId) {
+        User user = userDAO.getUserById(userId);
+        if (user == null) {
+            return 0;
+        }
+        return 1;
+    }
 }

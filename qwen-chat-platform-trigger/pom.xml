@@ -37,6 +37,10 @@
             <groupId>top.xiaoming-programming</groupId>
             <artifactId>qwen-chat-platform-domain</artifactId>
         </dependency>
+        <dependency>
+            <groupId>top.xiaoming-programming</groupId>
+            <artifactId>qwen-chat-platform-types</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

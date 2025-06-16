@@ -15,8 +15,7 @@ import java.util.List;
 public class ChatRequestDTO {
     private String userId;
     private String content;
-    @JsonProperty("file")
-    private List<File> file;
+    private List<String> file;
     @JsonProperty("msg_type")
     private Integer msgType;
     private boolean think;

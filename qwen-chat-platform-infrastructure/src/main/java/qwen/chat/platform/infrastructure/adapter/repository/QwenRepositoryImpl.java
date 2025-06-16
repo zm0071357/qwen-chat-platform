@@ -7,11 +7,16 @@ import okhttp3.sse.EventSourceListener;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
 import qwen.chat.platform.domain.qwen.adapter.port.OnlineLinkPort;
 import qwen.chat.platform.domain.qwen.adapter.repository.QwenRepository;
+import qwen.chat.platform.domain.qwen.model.MessageContentEntity;
 import qwen.chat.platform.domain.qwen.model.entity.AnalysisVideoEntity;
+import qwen.chat.platform.domain.qwen.model.entity.MessageEntity;
+import qwen.chat.platform.domain.qwen.model.valobj.File;
+import qwen.chat.platform.domain.qwen.model.valobj.FileTypeEnum;
 import qwen.chat.platform.domain.qwen.model.valobj.MessageConstant;
 import qwen.chat.platform.domain.qwen.model.valobj.RoleConstant;
 import qwen.chat.platform.infrastructure.dao.QwenDao;
 import qwen.chat.platform.infrastructure.dao.po.History;
+import qwen.chat.platform.types.utils.AliOSSUtils;
 import qwen.sdk.largemodel.chat.enums.ChatModelEnum;
 import qwen.sdk.largemodel.chat.impl.ChatServiceImpl;
 import qwen.sdk.largemodel.chat.model.ChatMutiResponse;
@@ -20,11 +25,15 @@ import qwen.sdk.largemodel.chat.model.ChatRequest;
 import retrofit2.Call;
 import retrofit2.Response;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 @Slf4j
 public class QwenRepositoryImpl implements QwenRepository {
@@ -35,9 +44,30 @@ public class QwenRepositoryImpl implements QwenRepository {
     private final OnlineLinkPort onlineLinkPort;
     private final ChatServiceImpl chatServiceImpl;
 
+    private final Map<FileTypeEnum, Function<MessageContentEntity, List<ChatRequest.Input.Message.Content>>> fileMap = new HashMap<>();
+
     public QwenRepositoryImpl(OnlineLinkPort onlineLinkPort, ChatServiceImpl chatServiceImpl) {
         this.onlineLinkPort = onlineLinkPort;
         this.chatServiceImpl = chatServiceImpl;
+    }
+
+    @PostConstruct
+    private void init() {
+        // 初始化
+        fileMap.put(FileTypeEnum.IMAGE, this::createImageMessage);
+    }
+
+    private List<ChatRequest.Input.Message.Content> createImageMessage(MessageContentEntity messageContentEntity) {
+        String file = messageContentEntity.getFile();
+        String content = messageContentEntity.getContent();
+        List<ChatRequest.Input.Message.Content> userContent = new ArrayList<>();
+        userContent.add(ChatRequest.Input.Message.Content.builder()
+                .image(file)
+                .build());
+        userContent.add(ChatRequest.Input.Message.Content.builder()
+                .text(content != null ? content : MessageConstant.DES_IMAGE_MESSAGE)
+                .build());
+        return userContent;
     }
 
     @Override
@@ -95,6 +125,28 @@ public class QwenRepositoryImpl implements QwenRepository {
         return this.handle(messages, search, historyCode, userId, false);
     }
 
+    @Override
+    public ResponseBodyEmitter chatWithFile(List<ChatRequest.Input.Message> messages, MessageEntity messageEntity) {
+        List<String> fileList = messageEntity.getFileList();
+        boolean isSaveHistory = true;
+        for (String file : fileList) {
+            FileTypeEnum fileTypeEnum = messageEntity.fileType(file);
+            if (fileTypeEnum.getFileType().equals(FileTypeEnum.VIDEO.getFileType()) || fileTypeEnum.getFileType().equals(FileTypeEnum.UNKNOWN.getFileType())) {
+                isSaveHistory = false;
+            }
+            Function<MessageContentEntity, List<ChatRequest.Input.Message.Content>> handler = fileMap.get(fileTypeEnum);
+            List<ChatRequest.Input.Message.Content> userContent = handler.apply(MessageContentEntity.builder()
+                    .file(file)
+                    .content(messageEntity.getContent())
+                    .build());
+            messages.add(ChatRequest.Input.Message.builder()
+                    .role(RoleConstant.USER)
+                    .content(userContent)
+                    .build());
+        }
+        return this.handle(messages, messageEntity.isSearch(), messageEntity.getHistoryCode(), messageEntity.getUserId(), isSaveHistory);
+    }
+
     /**
      * 获取在线视频链接
      * @param link
@@ -123,6 +175,7 @@ public class QwenRepositoryImpl implements QwenRepository {
         StringBuilder result = new StringBuilder();
         ResponseBodyEmitter emitter = new ResponseBodyEmitter(10 * 60 * 1000L);
         AtomicBoolean streamFailed = new AtomicBoolean(false); // 标记流是否失败
+        AtomicBoolean resultFailed = new AtomicBoolean(false); // 标记回复是否失败
         try {
             // 构造参数
             ChatRequest request = ChatRequest.builder()
@@ -152,12 +205,18 @@ public class QwenRepositoryImpl implements QwenRepository {
                             // 获取文本内容
                             String text = response.getOutput().getChoices().get(0).getMessage().getContent().get(0).getText();
                             result.append(text);
-                            emitter.send(text); // 实时发送到客户端
+                            emitter.send(text);
+                        } else if (response.getOutput() != null && response.getOutput().getChoices().get(0).getFinish_reason().equals("stop")) {
+                            log.info("回答终止: {}", data);
                         } else {
-                            log.warn("收到的响应没有有效的输出或选项，数据: {}", data);
+                            log.warn("回答失败: {}", data);
+                            messages.remove(messages.size() - 1);
+                            resultFailed.set(true); // 标记回答失败
+                            emitter.send(MessageConstant.TEXT_FAILED_MESSAGE);
                         }
                     } catch (Exception e) {
                         streamFailed.set(true); // 标记流失败
+                        resultFailed.set(true); // 标记回答失败
                         emitter.completeWithError(new RuntimeException("流式数据处理失败", e));
                     }
                 }
@@ -167,7 +226,7 @@ public class QwenRepositoryImpl implements QwenRepository {
                     if (!streamFailed.get()) {
                         try {
                             log.info("result:{}", result);
-                            if (isSaveHistory) {
+                            if (isSaveHistory && !resultFailed.get()) {
                                 // 将回答加入历史记录
                                 List<ChatRequest.Input.Message.Content> systemContent = new ArrayList<>();
                                 systemContent.add(ChatRequest.Input.Message.Content.builder()
@@ -200,6 +259,7 @@ public class QwenRepositoryImpl implements QwenRepository {
                     String errorMsg = "流式请求失败: " + (response != null ? response.message() : "未知错误");
                     log.error(errorMsg, t);
                     emitter.completeWithError(new RuntimeException(errorMsg, t));
+                    messages.remove(messages.size() - 1);
                 }
             });
         } catch (IOException e) {

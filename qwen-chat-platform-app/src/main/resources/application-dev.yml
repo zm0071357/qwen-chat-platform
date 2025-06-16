@@ -8,11 +8,16 @@ spring:
     password:
     url: jdbc:mysql://127.0.0.1:3306/qwen-chat-platform?useUnicode=true&characterEncoding=utf8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&serverTimezone=Asia/Shanghai&useSSL=true
     driver-class-name: com.mysql.cj.jdbc.Driver
+  # 上传文件大小限制
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 500MB
 
 # MyBatis 配置
 mybatis:
   mapper-locations: classpath:/mybatis/mapper/*.xml
-  config-location:  classpath:/mybatis/config/mybatis-config.xml
+  config-location: classpath:/mybatis/config/mybatis-config.xml
 
 sa-token:
   # token 名称（同时也是 cookie 名称）
@@ -55,6 +60,14 @@ thread:
         keep-alive-time: 5000
         block-queue-size: 5000
         policy: CallerRunsPolicy
+
+# 阿里云OSS配置
+aliyun:
+  oss:
+    endpoint:
+    accessKeyId:
+    accessKeySecret:
+    bucketName:
 
 # 日志
 logging:
