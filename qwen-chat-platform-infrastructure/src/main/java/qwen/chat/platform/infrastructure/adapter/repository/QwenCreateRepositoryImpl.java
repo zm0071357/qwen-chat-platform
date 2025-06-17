@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import qwen.chat.platform.domain.qwen.adapter.repository.QwenCreateRepository;
 import qwen.chat.platform.domain.qwen.model.entity.CreateImageEntity;
 import qwen.chat.platform.domain.qwen.model.entity.ResponseEntity;
+import qwen.chat.platform.domain.qwen.model.valobj.CommandTypeEnum;
 import qwen.chat.platform.domain.qwen.model.valobj.MessageConstant;
 import qwen.chat.platform.domain.qwen.model.valobj.RoleConstant;
 import qwen.chat.platform.domain.qwen.model.valobj.SizeTypeEnum;
@@ -49,6 +50,121 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
                 .parameters(ImageRequest.Parameters.builder()
                         .prompt_extend(true)
                         .size(SizeTypeEnum.getSize(sizeType))
+                        .n(1)
+                        .build())
+                .build();
+        return this.imageHandle(imageRequest, history, userId, historyCode);
+    }
+
+    @Override
+    public ResponseEntity descriptionEdit(CreateImageEntity createImageEntity) {
+        // 构造参数
+        String userId = createImageEntity.getUserId();
+        String historyCode = createImageEntity.getHistoryCode();
+        String content = createImageEntity.getContent();
+        String refer = createImageEntity.getRefer();
+        List<ChatRequest.Input.Message> history = createImageEntity.getHistory();
+        ImageRequest imageRequest = ImageRequest.builder()
+                .model(ImageEnum.WANX_21_T2I_TURBO.getModel())
+                .input(ImageRequest.InputExtend.builder()
+                        .function(CommandTypeEnum.DESCRIPTION_EDIT.getFunction())
+                        .prompt(content)
+                        .base_image_url(refer)
+                        .build())
+                .parameters(ImageRequest.ParametersExtend.builder()
+                        .strength(0.3F)
+                        .n(1)
+                        .build())
+                .build();
+        return this.imageHandle(imageRequest, history, userId, historyCode);
+    }
+
+    @Override
+    public ResponseEntity removeWatermark(CreateImageEntity createImageEntity) {
+        // 构造参数
+        String userId = createImageEntity.getUserId();
+        String historyCode = createImageEntity.getHistoryCode();
+        String content = createImageEntity.getContent();
+        String refer = createImageEntity.getRefer();
+        List<ChatRequest.Input.Message> history = createImageEntity.getHistory();
+        ImageRequest imageRequest = ImageRequest.builder()
+                .model(ImageEnum.WANX_21_T2I_TURBO.getModel())
+                .input(ImageRequest.InputExtend.builder()
+                        .function(CommandTypeEnum.REMOVE_WATERMARK.getFunction())
+                        .prompt(content)
+                        .base_image_url(refer)
+                        .build())
+                .parameters(ImageRequest.Parameters.builder()
+                        .n(1)
+                        .build())
+                .build();
+        return this.imageHandle(imageRequest, history, userId, historyCode);
+    }
+
+    @Override
+    public ResponseEntity expand(CreateImageEntity createImageEntity) {
+        // 构造参数
+        String userId = createImageEntity.getUserId();
+        String historyCode = createImageEntity.getHistoryCode();
+        String content = createImageEntity.getContent();
+        String refer = createImageEntity.getRefer();
+        List<ChatRequest.Input.Message> history = createImageEntity.getHistory();
+        ImageRequest imageRequest = ImageRequest.builder()
+                .model(ImageEnum.WANX_21_T2I_TURBO.getModel())
+                .input(ImageRequest.InputExtend.builder()
+                        .function(CommandTypeEnum.EXPAND.getFunction())
+                        .prompt(content)
+                        .base_image_url(refer)
+                        .build())
+                .parameters(ImageRequest.ParametersExtend.builder()
+                        .right_scale(1.5F)
+                        .left_scale(1.5F)
+                        .top_scale(1.5F)
+                        .bottom_scale(1.5F)
+                        .n(1)
+                        .build())
+                .build();
+        return this.imageHandle(imageRequest, history, userId, historyCode);
+    }
+
+    @Override
+    public ResponseEntity superResolution(CreateImageEntity createImageEntity) {
+        // 构造参数
+        String userId = createImageEntity.getUserId();
+        String historyCode = createImageEntity.getHistoryCode();
+        String content = createImageEntity.getContent();
+        String refer = createImageEntity.getRefer();
+        List<ChatRequest.Input.Message> history = createImageEntity.getHistory();
+        ImageRequest imageRequest = ImageRequest.builder()
+                .model(ImageEnum.WANX_21_T2I_TURBO.getModel())
+                .input(ImageRequest.InputExtend.builder()
+                        .function(CommandTypeEnum.SUPER_RESOLUTION.getFunction())
+                        .prompt(content)
+                        .base_image_url(refer)
+                        .build())
+                .parameters(ImageRequest.Parameters.builder()
+                        .n(1)
+                        .build())
+                .build();
+        return this.imageHandle(imageRequest, history, userId, historyCode);
+    }
+
+    @Override
+    public ResponseEntity colorization(CreateImageEntity createImageEntity) {
+        // 构造参数
+        String userId = createImageEntity.getUserId();
+        String historyCode = createImageEntity.getHistoryCode();
+        String content = createImageEntity.getContent();
+        String refer = createImageEntity.getRefer();
+        List<ChatRequest.Input.Message> history = createImageEntity.getHistory();
+        ImageRequest imageRequest = ImageRequest.builder()
+                .model(ImageEnum.WANX_21_T2I_TURBO.getModel())
+                .input(ImageRequest.InputExtend.builder()
+                        .function(CommandTypeEnum.COLORIZATION.getFunction())
+                        .prompt(content)
+                        .base_image_url(refer)
+                        .build())
+                .parameters(ImageRequest.Parameters.builder()
                         .n(1)
                         .build())
                 .build();

@@ -23,26 +23,26 @@ public class QwenCreateServiceImpl extends DefaultQwenCreateService {
 
     @Override
     protected ResponseEntity descriptionEdit(CreateImageEntity createImageEntity) {
-        return null;
+        return qwenCreateRepository.descriptionEdit(createImageEntity);
     }
 
     @Override
     protected ResponseEntity removeWatermark(CreateImageEntity createImageEntity) {
-        return null;
+        return qwenCreateRepository.removeWatermark(createImageEntity);
     }
 
     @Override
     protected ResponseEntity expand(CreateImageEntity createImageEntity) {
-        return null;
+        return qwenCreateRepository.expand(createImageEntity);
     }
 
     @Override
     protected ResponseEntity superResolution(CreateImageEntity createImageEntity) {
-        return null;
+        return qwenCreateRepository.superResolution(createImageEntity);
     }
 
     @Override
     protected ResponseEntity colorization(CreateImageEntity createImageEntity) {
-        return null;
+        return qwenCreateRepository.colorization(createImageEntity);
     }
 }

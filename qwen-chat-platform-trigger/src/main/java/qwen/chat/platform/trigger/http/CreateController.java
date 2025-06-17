@@ -45,6 +45,13 @@ public class CreateController implements ImageService {
                     .info(ImageResultEnum.NULL_PARAMETER.getInfo())
                     .build();
         }
+        // 参数合法性校验
+        if (CommandTypeEnum.getCommand(commandType) == null) {
+            return Response.<ImageResponseDTO>builder()
+                    .code(String.valueOf(ImageResultEnum.NOT_EXIST_PARAMETER.getCode()))
+                    .info(ImageResultEnum.NOT_EXIST_PARAMETER.getInfo())
+                    .build();
+        }
         // 参考图-命令类型校验
         if (refer == null && !CommandTypeEnum.CREATE_IMAGE.getType().equals(commandType)) {
             return Response.<ImageResponseDTO>builder()

@@ -10,16 +10,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public enum CommandTypeEnum {
 
-    CREATE_IMAGE(1, "生成图片"),
-    DESCRIPTION_EDIT(2, "指令编辑"),
-    REMOVE_WATERMARK(3, "去文字水印"),
-    EXPAND(4, "扩图"),
-    SUPER_RESOLUTION(5, "图像超分"),
-    COLORIZATION(6, "图像上色"),
+    CREATE_IMAGE(1, "生成图片", ""),
+    DESCRIPTION_EDIT(2, "指令编辑", "description_edit"),
+    REMOVE_WATERMARK(3, "去文字水印", "remove_watermark"),
+    EXPAND(4, "扩图", "expand"),
+    SUPER_RESOLUTION(5, "图像超分", "super_resolution"),
+    COLORIZATION(6, "图像上色", "colorization"),
     ;
 
     private Integer type;
     private String info;
+    private String function;
 
     public static String getCommand(Integer type) {
         for (CommandTypeEnum value : values()) {
@@ -27,6 +28,6 @@ public enum CommandTypeEnum {
                 return value.getInfo();
             }
         }
-        return SizeTypeEnum.ONE_ONE.getSize();
+        return null;
     }
 }

@@ -5,4 +5,14 @@ import qwen.chat.platform.domain.qwen.model.entity.ResponseEntity;
 
 public interface QwenCreateRepository {
     ResponseEntity createImage(CreateImageEntity createImageEntity);
+
+    ResponseEntity descriptionEdit(CreateImageEntity createImageEntity);
+
+    ResponseEntity removeWatermark(CreateImageEntity createImageEntity);
+
+    ResponseEntity expand(CreateImageEntity createImageEntity);
+
+    ResponseEntity superResolution(CreateImageEntity createImageEntity);
+
+    ResponseEntity colorization(CreateImageEntity createImageEntity);
 }
