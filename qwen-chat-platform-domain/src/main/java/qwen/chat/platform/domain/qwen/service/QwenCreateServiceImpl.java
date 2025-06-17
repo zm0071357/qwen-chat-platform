@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import qwen.chat.platform.domain.qwen.DefaultQwenCreateService;
 import qwen.chat.platform.domain.qwen.adapter.repository.QwenCreateRepository;
 import qwen.chat.platform.domain.qwen.model.entity.CreateImageEntity;
+import qwen.chat.platform.domain.qwen.model.entity.CreateVideoEntity;
 import qwen.chat.platform.domain.qwen.model.entity.ResponseEntity;
 
 import javax.annotation.Resource;
@@ -44,5 +45,10 @@ public class QwenCreateServiceImpl extends DefaultQwenCreateService {
     @Override
     protected ResponseEntity colorization(CreateImageEntity createImageEntity) {
         return qwenCreateRepository.colorization(createImageEntity);
+    }
+
+    @Override
+    protected ResponseEntity createVideo(CreateVideoEntity createVideoEntity) {
+        return qwenCreateRepository.createVideo(createVideoEntity);
     }
 }

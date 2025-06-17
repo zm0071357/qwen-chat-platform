@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-public enum ImageResultEnum {
+public enum CreateResultEnum {
     SUCCESS(0, "请求成功"),
     FAILED(1, "请求失败，请稍后再试"),
     NULL_PARAMETER(1, "非法请求：缺少必要参数"),

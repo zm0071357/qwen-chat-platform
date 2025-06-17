@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import qwen.chat.platform.domain.qwen.adapter.repository.QwenCreateRepository;
 import qwen.chat.platform.domain.qwen.model.entity.CreateImageEntity;
+import qwen.chat.platform.domain.qwen.model.entity.CreateVideoEntity;
 import qwen.chat.platform.domain.qwen.model.entity.ResponseEntity;
 import qwen.chat.platform.domain.qwen.model.valobj.CommandTypeEnum;
 import qwen.chat.platform.domain.qwen.model.valobj.MessageConstant;
@@ -18,6 +19,11 @@ import qwen.sdk.largemodel.image.impl.ImageServiceImpl;
 import qwen.sdk.largemodel.image.model.ImageRequest;
 import qwen.sdk.largemodel.image.model.ImageResponse;
 import qwen.sdk.largemodel.image.model.ResultResponse;
+import qwen.sdk.largemodel.video.enums.VideoModelEnum;
+import qwen.sdk.largemodel.video.enums.VideoTaskStatusEnum;
+import qwen.sdk.largemodel.video.impl.VideoServiceImpl;
+import qwen.sdk.largemodel.video.model.VideoRequest;
+import qwen.sdk.largemodel.video.model.VideoResponse;
 
 import javax.annotation.Resource;
 import java.io.IOException;
@@ -32,8 +38,11 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
 
     private final ImageServiceImpl imageServiceImpl;
 
-    public QwenCreateRepositoryImpl(ImageServiceImpl imageServiceImpl) {
+    private final VideoServiceImpl videoServiceImpl;
+
+    public QwenCreateRepositoryImpl(ImageServiceImpl imageServiceImpl, VideoServiceImpl videoServiceImpl) {
         this.imageServiceImpl = imageServiceImpl;
+        this.videoServiceImpl = videoServiceImpl;
     }
 
     @Override
@@ -171,6 +180,25 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
         return this.imageHandle(imageRequest, history, userId, historyCode);
     }
 
+    @Override
+    public ResponseEntity createVideo(CreateVideoEntity createVideoEntity) {
+        String content = createVideoEntity.getContent();
+        String firstFrameUrl = createVideoEntity.getFirstFrameUrl();
+        String lastFrameUrl = createVideoEntity.getLastFrameUrl();
+        VideoRequest videoRequest = VideoRequest.builder()
+                .model(VideoModelEnum.WANX_21_T2V_TURBO.getModel())
+                .input(VideoRequest.InputExtend.builder()
+                        .firstFrameUrl(firstFrameUrl)
+                        .lastFrameUrl(lastFrameUrl)
+                        .prompt(content)
+                        .build())
+                .parameters(VideoRequest.ParametersExtend.builder()
+                        .promptExtend(true)
+                        .build())
+                .build();
+        return this.videoHandle(videoRequest);
+    }
+
     /**
      * 通用图片处理
      * @param imageRequest
@@ -233,4 +261,56 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
                     .build();
         }
     }
+
+    /**
+     * 通用视频处理
+     * @param videoRequest
+     * @return
+     */
+    private ResponseEntity videoHandle(VideoRequest videoRequest) {
+        try {
+            VideoResponse response = videoServiceImpl.videoSynthesis(videoRequest);
+            String taskId = response.getOutput().getTask_id();
+            String curStatus = ImageTaskStatusEnum.RUNNING.getCode();
+            qwen.sdk.largemodel.video.model.ResultResponse result = null;
+            int count = 0;
+            int maxCount = 150;
+            // 轮询获取任务结果
+            while (count < maxCount || VideoTaskStatusEnum.RUNNING.getCode().equals(curStatus)) {
+                result = videoServiceImpl.result(taskId);
+                curStatus = result.getOutput().getTask_status();
+                count += 1;
+                log.info("请求次数:{},结果:{}", count, curStatus);
+                if (VideoTaskStatusEnum.SUCCEEDED.getCode().equals(curStatus)) {
+                    break;
+                } else if (VideoTaskStatusEnum.FAILED.getCode().equals(curStatus) || VideoTaskStatusEnum.UNKNOWN.getCode().equals(curStatus)) {
+                    return ResponseEntity.builder()
+                            .isSuccess(false)
+                            .message(MessageConstant.VIDEO_FAILED_MESSAGE)
+                            .build();
+                }
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    return ResponseEntity.builder()
+                            .isSuccess(false)
+                            .message(MessageConstant.VIDEO_FAILED_MESSAGE)
+                            .build();
+                }
+            }
+            String url = result.getOutput().getVideo_url();
+            log.info("url:{}", url);
+            return ResponseEntity.builder()
+                    .isSuccess(true)
+                    .result(url)
+                    .build();
+        } catch (IOException e) {
+            log.info("生成视频出错:{}", e.getMessage());
+            return ResponseEntity.builder()
+                    .isSuccess(false)
+                    .message(MessageConstant.VIDEO_FAILED_MESSAGE)
+                    .build();
+        }
+    }
+
 }

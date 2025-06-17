@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import qwen.chat.platform.domain.login.UserService;
 import qwen.chat.platform.domain.qwen.adapter.repository.QwenRepository;
 import qwen.chat.platform.domain.qwen.model.entity.CreateImageEntity;
+import qwen.chat.platform.domain.qwen.model.entity.CreateVideoEntity;
 import qwen.chat.platform.domain.qwen.model.entity.ResponseEntity;
 import qwen.chat.platform.domain.qwen.model.valobj.CommandTypeEnum;
 import qwen.chat.platform.domain.qwen.model.valobj.RoleConstant;
@@ -64,6 +65,36 @@ public abstract class DefaultQwenCreateService implements QwenCreateService {
         return imageHandlerMap.get(commandType).apply(createImageEntity);
     }
 
+    @Override
+    public ResponseEntity handleVideo(CreateVideoEntity createVideoEntity) {
+//        String userId = createVideoEntity.getUserId();
+//        String historyCode = createVideoEntity.getHistoryCode();
+//        String content = createVideoEntity.getContent();
+//        String firstFrameUrl = createVideoEntity.getFirstFrameUrl();
+//        String lastFrameUrl = createVideoEntity.getLastFrameUrl();
+//        List<ChatRequest.Input.Message> history = qwenRepository.getHistory(userId, historyCode);
+//        List<ChatRequest.Input.Message.Content> userContent = new ArrayList<>();
+//        userContent.add(ChatRequest.Input.Message.Content.builder()
+//                .text(content)
+//                .build());
+//        if (firstFrameUrl != null) {
+//            userContent.add(ChatRequest.Input.Message.Content.builder()
+//                    .image(firstFrameUrl)
+//                    .build());
+//        }
+//        if (lastFrameUrl != null) {
+//            userContent.add(ChatRequest.Input.Message.Content.builder()
+//                    .image(lastFrameUrl)
+//                    .build());
+//        }
+//        history.add(ChatRequest.Input.Message.builder()
+//                .role(RoleConstant.USER)
+//                .content(userContent)
+//                .build());
+//        createVideoEntity.setHistory(history);
+        return this.createVideo(createVideoEntity);
+    }
+
     protected abstract ResponseEntity createImage(CreateImageEntity createImageEntity);
 
     protected abstract ResponseEntity descriptionEdit(CreateImageEntity createImageEntity);
@@ -76,4 +107,5 @@ public abstract class DefaultQwenCreateService implements QwenCreateService {
 
     protected abstract ResponseEntity colorization(CreateImageEntity createImageEntity);
 
+    protected abstract ResponseEntity createVideo(CreateVideoEntity createVideoEntity);
 }

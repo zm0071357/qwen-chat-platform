@@ -70,8 +70,8 @@ public class QwenConfig {
     }
 
     @Bean(name = "qwenCreateRepositoryImpl")
-    public QwenCreateRepositoryImpl qwenCreateRepositoryImpl(ImageServiceImpl imageServiceImpl) {
-        return new QwenCreateRepositoryImpl(imageServiceImpl);
+    public QwenCreateRepositoryImpl qwenCreateRepositoryImpl(ImageServiceImpl imageServiceImpl, VideoServiceImpl videoServiceImpl) {
+        return new QwenCreateRepositoryImpl(imageServiceImpl, videoServiceImpl);
     }
 
 }
