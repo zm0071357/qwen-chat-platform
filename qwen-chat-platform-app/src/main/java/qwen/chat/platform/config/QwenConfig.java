@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import qwen.chat.platform.domain.qwen.adapter.port.OnlineLinkPort;
+import qwen.chat.platform.infrastructure.adapter.repository.QwenCreateRepositoryImpl;
 import qwen.chat.platform.infrastructure.adapter.repository.QwenRepositoryImpl;
 import qwen.sdk.factory.ModelFactory;
 import qwen.sdk.factory.defaults.DefaultModelFactory;
@@ -67,4 +68,10 @@ public class QwenConfig {
                 .create(OnlineLinkPort.class);
         return new QwenRepositoryImpl(onlineLinkPort, chatServiceImpl);
     }
+
+    @Bean(name = "qwenCreateRepositoryImpl")
+    public QwenCreateRepositoryImpl qwenCreateRepositoryImpl(ImageServiceImpl imageServiceImpl) {
+        return new QwenCreateRepositoryImpl(imageServiceImpl);
+    }
+
 }

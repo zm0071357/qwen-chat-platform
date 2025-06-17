@@ -3,22 +3,17 @@ package qwen.chat.platform.api.dto;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
-import qwen.chat.platform.domain.qwen.model.valobj.File;
 
-import java.util.List;
-
-/**
- * 对话请求对象
- */
 @Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ChatRequestDTO {
+public class ImageRequestDTO {
     private String userId;
-    private String content;
-    private List<String> file;
-    private boolean think;
-    private boolean search;
     @JsonProperty("history_code")
     private String historyCode;
-
+    private String content;
+    @JsonProperty("command_type")
+    private Integer commandType;
+    @JsonProperty("size_type")
+    private Integer sizeType;
+    private String refer;
 }

@@ -7,19 +7,16 @@ import okhttp3.sse.EventSourceListener;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
 import qwen.chat.platform.domain.qwen.adapter.port.OnlineLinkPort;
 import qwen.chat.platform.domain.qwen.adapter.repository.QwenRepository;
-import qwen.chat.platform.domain.qwen.model.MessageContentEntity;
+import qwen.chat.platform.domain.qwen.model.entity.MessageContentEntity;
 import qwen.chat.platform.domain.qwen.model.entity.AnalysisVideoEntity;
 import qwen.chat.platform.domain.qwen.model.entity.MessageEntity;
-import qwen.chat.platform.domain.qwen.model.valobj.File;
 import qwen.chat.platform.domain.qwen.model.valobj.FileTypeEnum;
 import qwen.chat.platform.domain.qwen.model.valobj.MessageConstant;
 import qwen.chat.platform.domain.qwen.model.valobj.RoleConstant;
 import qwen.chat.platform.infrastructure.dao.QwenDao;
 import qwen.chat.platform.infrastructure.dao.po.History;
-import qwen.chat.platform.types.utils.AliOSSUtils;
 import qwen.sdk.largemodel.chat.enums.ChatModelEnum;
 import qwen.sdk.largemodel.chat.impl.ChatServiceImpl;
-import qwen.sdk.largemodel.chat.model.ChatMutiResponse;
 import qwen.sdk.largemodel.chat.model.ChatMutiStreamResponse;
 import qwen.sdk.largemodel.chat.model.ChatRequest;
 import retrofit2.Call;
@@ -166,7 +163,6 @@ public class QwenRepositoryImpl implements QwenRepository {
 
     /**
      * 获取在线视频链接
-     *
      * @param link
      * @return
      */
@@ -286,7 +282,10 @@ public class QwenRepositoryImpl implements QwenRepository {
         return emitter;
     }
 
-
+    /**
+     * 返回错误信息
+     * @return
+     */
     private ResponseBodyEmitter handleWrong() {
         ResponseBodyEmitter emitter = new ResponseBodyEmitter(10 * 60 * 1000L);
         try {

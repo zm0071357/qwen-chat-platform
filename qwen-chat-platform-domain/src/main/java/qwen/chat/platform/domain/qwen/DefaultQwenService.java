@@ -6,7 +6,6 @@ import qwen.chat.platform.domain.qwen.model.entity.MessageEntity;
 import qwen.chat.platform.domain.qwen.model.valobj.MessageTypeEnum;
 
 import javax.annotation.PostConstruct;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;

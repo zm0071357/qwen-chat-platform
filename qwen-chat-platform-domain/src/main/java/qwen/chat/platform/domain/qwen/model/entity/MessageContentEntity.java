@@ -1,4 +1,4 @@
-package qwen.chat.platform.domain.qwen.model;
+package qwen.chat.platform.domain.qwen.model.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

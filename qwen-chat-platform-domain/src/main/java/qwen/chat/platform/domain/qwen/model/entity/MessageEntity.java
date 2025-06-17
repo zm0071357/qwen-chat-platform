@@ -1,8 +1,6 @@
 package qwen.chat.platform.domain.qwen.model.entity;
 
 import lombok.*;
-import org.springframework.web.multipart.MultipartFile;
-import qwen.chat.platform.domain.qwen.model.valobj.File;
 import qwen.chat.platform.domain.qwen.model.valobj.FileTypeEnum;
 
 import java.util.List;
