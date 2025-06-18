@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 public enum CreateResultEnum {
     SUCCESS(0, "请求成功"),
     FAILED(1, "请求失败，请稍后再试"),
+    ILLEGAL(1, "非法请求：参数非法"),
     NULL_PARAMETER(1, "非法请求：缺少必要参数"),
     NULL_REFER(1, "非法请求：缺少参考图"),
     NOT_EXIST_PARAMETER(1, "非法请求：参数不存在"),

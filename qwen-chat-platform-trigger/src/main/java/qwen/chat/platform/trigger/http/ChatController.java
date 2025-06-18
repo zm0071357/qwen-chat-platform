@@ -1,5 +1,7 @@
 package qwen.chat.platform.trigger.http;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.stp.StpUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,6 +26,7 @@ import java.util.List;
 @RequestMapping("/chat")
 @CrossOrigin
 @Slf4j
+@SaCheckLogin
 public class ChatController implements ChatService {
 
     @Resource
@@ -48,12 +51,17 @@ public class ChatController implements ChatService {
         // 参数校验
         ResponseBodyEmitter emitter = new ResponseBodyEmitter(3 * 60 * 1000L);
         if (userId == null || historyCode == null || (content == null && (fileList == null || fileList.isEmpty()))) {
-            emitter.onError(throwable -> log.error(ChatResultEnum.NULL_PARAMETER.getInfo(), throwable));
+            emitter.completeWithError(new RuntimeException(ChatResultEnum.NULL_PARAMETER.getInfo()));
+            return emitter;
         }
         if (fileList != null && search) {
-            emitter.onError(throwable -> log.error(ChatResultEnum.EXIST_FILE_SEARCH.getInfo(), throwable));
+            emitter.completeWithError(new RuntimeException(ChatResultEnum.EXIST_FILE_SEARCH.getInfo()));
+            return emitter;
         }
-
+        if (!StpUtil.getLoginIdAsString().equals(userId)) {
+            emitter.completeWithError(new RuntimeException(ChatResultEnum.ILLEGAL.getInfo()));
+            return emitter;
+        }
         // 请求
         MessageEntity messageEntity = MessageEntity.builder()
                 .userId(userId)

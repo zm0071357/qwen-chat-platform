@@ -99,6 +99,10 @@ public class QwenRepositoryImpl implements QwenRepository {
         userContent.add(ChatRequest.Input.Message.Content.builder()
                 .text(content)
                 .build());
+        messages.add(ChatRequest.Input.Message.builder()
+                .role(RoleConstant.USER)
+                .content(userContent)
+                .build());
         return this.handle(messages, search, historyCode, userId, true);
     }
 

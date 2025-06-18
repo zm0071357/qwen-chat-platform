@@ -1,5 +1,6 @@
 package qwen.chat.platform.trigger.http;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -10,6 +11,7 @@ import qwen.chat.platform.domain.login.UserService;
 import qwen.chat.platform.domain.login.model.entity.LoginByAccEntity;
 import qwen.chat.platform.domain.login.model.entity.LoginResultEntity;
 import qwen.chat.platform.domain.login.model.entity.RegisterEntity;
+import qwen.chat.platform.domain.login.model.valobj.CheckIsLoginEnum;
 import qwen.chat.platform.domain.login.model.valobj.LogOutStatusEnum;
 import qwen.chat.platform.domain.login.model.valobj.LoginStatusEnum;
 import qwen.chat.platform.domain.login.model.valobj.RegisterStatusEnum;
@@ -115,6 +117,7 @@ public class LoginController implements LoginService {
     }
 
     @PostMapping("/logout")
+    @SaCheckLogin
     @Override
     public Response logout(@RequestBody LogOutRequestDTO logOutRequestDTO) {
         // 参数
@@ -138,6 +141,33 @@ public class LoginController implements LoginService {
         return Response.builder()
                 .code(String.valueOf(LogOutStatusEnum.SUCCESS.getCode()))
                 .info(LogOutStatusEnum.SUCCESS.getInfo())
+                .build();
+    }
+
+    @Override
+    public Response checkIsLogin(CheckIsLoginDTO checkIsLoginDTO) {
+        // 参数
+        String userId = checkIsLoginDTO.getUserId();
+        // 参数非空校验
+        if (userId == null) {
+            return Response.builder()
+                    .code(String.valueOf(CheckIsLoginEnum.NULL_ID.getCode()))
+                    .info(CheckIsLoginEnum.NULL_ID.getInfo())
+                    .build();
+        }
+        // 是否为同一个用户
+        String curId = StpUtil.getLoginIdAsString();
+        if (!userId.equals(curId)) {
+            return Response.builder()
+                    .code(String.valueOf(CheckIsLoginEnum.OTHER_ID.getCode()))
+                    .info(CheckIsLoginEnum.OTHER_ID.getInfo())
+                    .build();
+        }
+        // 校验
+        return Response.builder()
+                .code(String.valueOf(CheckIsLoginEnum.SUCCESS.getCode()))
+                .info(CheckIsLoginEnum.SUCCESS.getInfo())
+                .data(StpUtil.isLogin(userId))
                 .build();
     }
 

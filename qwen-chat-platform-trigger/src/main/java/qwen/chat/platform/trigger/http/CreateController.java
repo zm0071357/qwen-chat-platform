@@ -1,5 +1,7 @@
 package qwen.chat.platform.trigger.http;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.stp.StpUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import qwen.chat.platform.api.CreateService;
@@ -12,6 +14,7 @@ import qwen.chat.platform.domain.qwen.QwenCreateService;
 import qwen.chat.platform.domain.qwen.model.entity.CreateImageEntity;
 import qwen.chat.platform.domain.qwen.model.entity.CreateVideoEntity;
 import qwen.chat.platform.domain.qwen.model.entity.ResponseEntity;
+import qwen.chat.platform.domain.qwen.model.valobj.ChatResultEnum;
 import qwen.chat.platform.domain.qwen.model.valobj.CommandTypeEnum;
 import qwen.chat.platform.domain.qwen.model.valobj.CreateResultEnum;
 import qwen.chat.platform.domain.qwen.model.valobj.SizeTypeEnum;
@@ -21,6 +24,7 @@ import javax.annotation.Resource;
 @RestController
 @RequestMapping("/create")
 @CrossOrigin
+@SaCheckLogin
 @Slf4j
 public class CreateController implements CreateService {
 
@@ -52,6 +56,12 @@ public class CreateController implements CreateService {
             return Response.<CreateResponseDTO>builder()
                     .code(String.valueOf(CreateResultEnum.NOT_EXIST_PARAMETER.getCode()))
                     .info(CreateResultEnum.NOT_EXIST_PARAMETER.getInfo())
+                    .build();
+        }
+        if (!StpUtil.getLoginIdAsString().equals(userId)) {
+            return Response.<CreateResponseDTO>builder()
+                    .code(String.valueOf(CreateResultEnum.ILLEGAL.getCode()))
+                    .info(CreateResultEnum.ILLEGAL.getInfo())
                     .build();
         }
         // 参考图-命令类型校验
@@ -100,6 +110,12 @@ public class CreateController implements CreateService {
             return Response.<CreateResponseDTO>builder()
                     .code(String.valueOf(CreateResultEnum.NULL_PARAMETER.getCode()))
                     .info(CreateResultEnum.NULL_PARAMETER.getInfo())
+                    .build();
+        }
+        if (!StpUtil.getLoginIdAsString().equals(userId)) {
+            return Response.<CreateResponseDTO>builder()
+                    .code(String.valueOf(CreateResultEnum.ILLEGAL.getCode()))
+                    .info(CreateResultEnum.ILLEGAL.getInfo())
                     .build();
         }
         if (userService.checkUserIsExist(userId)) {

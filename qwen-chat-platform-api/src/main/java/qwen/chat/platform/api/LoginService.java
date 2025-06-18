@@ -32,4 +32,11 @@ public interface LoginService {
      * @return
      */
     Response logout(LogOutRequestDTO logOutRequestDTO);
+
+    /**
+     * 校验是否登录
+     * @param checkIsLoginDTO
+     * @return
+     */
+    Response checkIsLogin(CheckIsLoginDTO checkIsLoginDTO);
 }
