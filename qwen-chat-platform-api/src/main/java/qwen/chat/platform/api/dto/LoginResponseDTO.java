@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class LoginResponseDTO {
+    private String tokenName;
     private String token;
     private long timeout;
 }

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>浅度浏览 - 浅浅浏览一下</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.8.0/styles/github.min.css">
+  <link rel="stylesheet" href="css/chat.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked@5.1.1/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+</head>
+<body>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <button class="toggle-btn" id="toggleSidebar">
+      <i class="fas fa-bars"></i>
+    </button>
+    <h2>浅度浏览</h2>
+  </div>
+
+  <div class="sidebar-menu">
+    <div class="menu-item active">
+      <i class="fas fa-comments"></i>
+      <span>新对话</span>
+    </div>
+    <div class="menu-item">
+      <i class="fas fa-history"></i>
+      <span>历史记录</span>
+    </div>
+    <div class="menu-item">
+      <i class="fas fa-image"></i>
+      <span>图片创作</span>
+    </div>
+    <div class="menu-item">
+      <i class="fas fa-code"></i>
+      <span>代码助手</span>
+    </div>
+    <div class="menu-item">
+      <i class="fas fa-cog"></i>
+      <span>设置</span>
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <p>浅度浏览 v2.0</p>
+  </div>
+</div>
+
+<div class="main-content" id="mainContent">
+  <div class="main-header">
+    <div class="logo">
+      <i class="fas fa-comment-dots"></i>
+    </div>
+    <div class="header-text">
+      <h1>浅度浏览</h1>
+      <p>智能对话，高效创作</p>
+    </div>
+    <div class="user-info">
+      <div class="user-avatar">U</div>
+      <span>用户</span>
+    </div>
+  </div>
+
+  <div class="chat-container" id="chatContainer">
+    <div class="welcome-section">
+      <div class="logo">
+        <i class="fas fa-comment-dots"></i>
+      </div>
+      <h2>我是 ShallowBrowse，很高兴见到你！</h2>
+      <p>我可以帮你写代码、生成图片/视频，请把你的任务交给我吧~</p>
+    </div>
+  </div>
+
+  <div class="typing-indicator" id="typingIndicator">
+    <i class="fas fa-circle-notch fa-spin"></i> 思考中...
+  </div>
+
+  <div class="input-area">
+    <div class="input-container">
+      <textarea class="input-box" id="messageInput" placeholder="输入您的问题"></textarea>
+      <div class="input-controls">
+        <div class="search-toggle">
+          <input type="checkbox" id="searchToggle" checked>
+          <label for="searchToggle">联网搜索</label>
+        </div>
+        <button class="send-btn" id="sendButton">
+          <i class="fas fa-paper-plane"></i> 发送
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notification" id="notification"></div>
+<script src="js/chat.js"></script>
+</body>
+</html>

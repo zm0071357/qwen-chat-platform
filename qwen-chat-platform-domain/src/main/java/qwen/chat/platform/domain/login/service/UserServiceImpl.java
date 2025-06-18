@@ -50,6 +50,7 @@ public class UserServiceImpl implements UserService {
             return LoginResultEntity.builder()
                     .isSuccess(true)
                     .token(StpUtil.getTokenValue())
+                    .tokenName(StpUtil.getTokenName())
                     .timeout(StpUtil.getTokenTimeout())
                     .build();
         }

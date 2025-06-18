@@ -99,6 +99,7 @@ public class LoginController implements LoginService {
                     .info(LoginStatusEnum.SUCCESS.getInfo())
                     .data(LoginResponseDTO.builder()
                             .token(loginResultEntity.getToken())
+                            .tokenName(loginResultEntity.getTokenName())
                             .timeout(loginResultEntity.getTimeout())
                             .build())
                     .build();

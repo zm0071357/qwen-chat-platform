@@ -19,6 +19,7 @@ public class LoginResultEntity {
     private String message;
 
     private String token;
+    private String tokenName;
 
     private long timeout;
 
