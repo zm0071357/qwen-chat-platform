@@ -128,6 +128,25 @@ async function sendMessage() {
     }
 }
 
+// 处理token过期函数
+function handleTokenExpired() {
+    // 清除本地存储
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('tokenName');
+
+    // 移除已创建的AI消息元素
+    if (currentAIResponse && currentAIResponse.messageElement) {
+        currentAIResponse.messageElement.remove();
+    }
+
+    // 显示提示并跳转
+    showNotification('登录超时，请重新登录', 'error');
+    setTimeout(() => {
+        window.location.href = 'login.html';
+    }, 2000);
+}
+
 // 流式处理聊天响应
 async function streamChatResponse(content, search) {
     // 从localStorage获取token
@@ -175,49 +194,14 @@ async function streamChatResponse(content, search) {
             throw new Error(`HTTP错误! 状态: ${response.status}`);
         }
 
-        // 获取响应文本
-        const responseText = await response.text();
-
-        // 检查是否是 token 无效的错误
-        if (responseText.includes('"code":403') && responseText.includes('token 无效')) {
-            // 清除本地存储
-            localStorage.removeItem('token');
-            localStorage.removeItem('userId');
-            localStorage.removeItem('tokenName');
-
-            // 移除响应指示器
-            responseIndicator.remove();
-            cursor.remove();
-
-            // 移除已创建的AI消息元素
-            if (currentAIResponse && currentAIResponse.messageElement) {
-                currentAIResponse.messageElement.remove();
-            }
-
-            // 显示提示并跳转
-            showNotification('登录超时，请重新登录', 'error');
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 2000);
-            return;
-        }
+        // 直接使用流读取器，保持流式输出
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let accumulatedText = '';
+        let isTokenExpired = false;
 
         // 移除响应指示器
         responseIndicator.remove();
-
-        // 移除光标
-        cursor.remove();
-
-        // 处理流式响应 - 这里需要重新创建 reader，因为我们已经读取了响应文本
-        const reader = new ReadableStream({
-            start(controller) {
-                controller.enqueue(new TextEncoder().encode(responseText));
-                controller.close();
-            }
-        }).getReader();
-
-        const decoder = new TextDecoder("utf-8");
-        let accumulatedText = '';
 
         // 添加内容到消息元素
         const processStream = async () => {
@@ -229,6 +213,12 @@ async function streamChatResponse(content, search) {
                     // 解码并处理数据块
                     const chunk = decoder.decode(value, { stream: true });
                     accumulatedText += chunk;
+
+                    // 检查是否是 token 无效的错误
+                    if (accumulatedText.includes('"code":403') && accumulatedText.includes('token 无效')) {
+                        isTokenExpired = true;
+                        break; // 立即中断流处理
+                    }
 
                     // 使用Markdown渲染文本
                     const sanitizedHtml = DOMPurify.sanitize(marked.parse(accumulatedText));
@@ -247,10 +237,19 @@ async function streamChatResponse(content, search) {
             } catch (error) {
                 console.error('流处理错误:', error);
                 currentAIResponse.contentElement.innerHTML += `<p style="color: red;">流处理错误: ${error.message}</p>`;
+            } finally {
+                // 移除光标
+                cursor.remove();
             }
         };
 
         await processStream();
+
+        // 流结束后检查token是否过期
+        if (isTokenExpired) {
+            handleTokenExpired();
+            return;
+        }
     } catch (error) {
         console.error('请求错误:', error);
         // 移除指示器
@@ -259,21 +258,7 @@ async function streamChatResponse(content, search) {
 
         // 检查是否是403错误
         if (error.message.includes('403')) {
-            // 清除本地存储
-            localStorage.removeItem('token');
-            localStorage.removeItem('userId');
-            localStorage.removeItem('tokenName');
-
-            // 移除已创建的AI消息元素
-            if (currentAIResponse && currentAIResponse.messageElement) {
-                currentAIResponse.messageElement.remove();
-            }
-
-            // 显示提示并跳转
-            showNotification('登录超时，请重新登录', 'error');
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 2000);
+            handleTokenExpired();
             return;
         }
 
