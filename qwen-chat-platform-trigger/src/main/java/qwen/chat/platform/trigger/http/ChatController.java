@@ -87,11 +87,11 @@ public class ChatController implements ChatService {
                             .info(UploadFileResultEnum.NULL_PARAMETER.getInfo())
                             .build();
         }
-        log.info("fileSize:{}", file.getSize());
         if (userService.checkUserIsExist(userId)) {
             try {
                 // 上传操作
                 String url = aliOSSUtils.upload(file);
+                log.info("url:{}", url);
                 return Response.<UploadFileResponseDTO>builder()
                         .code(String.valueOf(UploadFileResultEnum.SUCCESS.getCode()))
                         .data(UploadFileResponseDTO.builder()

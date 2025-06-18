@@ -81,12 +81,26 @@
 
   <div class="input-area">
     <div class="input-container">
+      <div id="filePreview" class="file-preview"></div>
       <textarea class="input-box" id="messageInput" placeholder="输入您的问题"></textarea>
       <div class="input-controls">
-        <div class="search-toggle">
-          <input type="checkbox" id="searchToggle" checked>
-          <label for="searchToggle">联网搜索</label>
+        <div class="action-buttons">
+          <!-- 新样式的联网搜索按钮 -->
+          <button class="action-btn" id="searchButton" data-active="true">
+            <i class="fas fa-wifi"></i>
+            <span>联网搜索</span>
+          </button>
+
+          <!-- 新样式的文件上传按钮 -->
+          <button class="action-btn" id="fileButton">
+            <i class="fas fa-file"></i>
+            <span>上传文件</span>
+          </button>
+
+          <!-- 隐藏的文件输入 -->
+          <input type="file" id="fileInput" style="display: none;">
         </div>
+
         <button class="send-btn" id="sendButton">
           <i class="fas fa-paper-plane"></i> 发送
         </button>
@@ -96,6 +110,11 @@
 </div>
 
 <div class="notification" id="notification"></div>
+<!-- 添加图片预览模态框 -->
+<div id="imagePreviewModal" class="modal">
+  <span id="modalClose" class="close">&times;</span>
+  <img class="modal-content" id="previewImage">
+</div>
 <script src="js/chat.js"></script>
 </body>
 </html>
