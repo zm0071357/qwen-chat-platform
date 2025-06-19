@@ -155,7 +155,7 @@ public class ChatController implements ChatService {
         }
     }
 
-    @GetMapping("/get_history")
+    @PostMapping("/get_history")
     @Override
     public Response<List<ChatRequest.Input.Message>> getHistory(@RequestBody HistoryRequestDTO historyRequestDTO) {
         // 参数

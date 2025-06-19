@@ -49,7 +49,7 @@ window.addEventListener('load', () => {
     searchButton.addEventListener('click', toggleSearch);
 
     // 获取历史记录
-    fetchHistoryCodes()
+    fetchHistoryCodes();
 });
 
 // 获取DOM元素
@@ -66,11 +66,12 @@ const menuItems = document.querySelectorAll('.menu-item');
 
 // 从localStorage获取用户ID
 const userId = localStorage.getItem('userId');
-const historyCode = userId + "_history_1"; // 动态生成历史记录代码
+let currentHistoryCode = null; // 当前使用的历史记录码
 let messageCount = 0;
 let isStreaming = false;
 let currentAIResponse = null;
 let isSearchEnabled = true; // 默认开启搜索
+let historyCodesList = []; // 存储历史记录码列表
 
 // 声明文件URL数组
 let fileUrls = [];
@@ -177,9 +178,42 @@ menuItems.forEach(item => {
             addMessage("您已切换到图片创作模式。请描述您想要生成的图片内容，例如：'生成一份薯条'", 'ai');
         } else if(menuText === '代码助手') {
             addMessage("您已切换到代码助手模式。请描述您的编程需求，例如：'用Java写一个冒泡排序'", 'ai');
+        } else if(menuText === '新对话') {
+            startNewConversation();
         }
     });
 });
+
+// 开始新对话
+function startNewConversation() {
+    // 生成新的历史记录码
+    const newHistoryCode = `历史记录${historyCodesList.length + 1}`;
+    currentHistoryCode = newHistoryCode;
+
+    // 清空聊天区域
+    chatContainer.innerHTML = `
+        <div class="welcome-section">
+            <div class="logo">
+                <i class="fas fa-comment-dots"></i>
+            </div>
+            <h2>我是 ShallowBrowse，很高兴见到你！</h2>
+            <p>我可以帮你写代码、生成图片/视频，请把你的任务交给我吧~</p>
+        </div>
+    `;
+
+    // 添加欢迎消息
+    setTimeout(() => {
+        const welcomeMsg = "欢迎使用浅度浏览！您现在可以：\n\n1. 在左侧边栏选择功能\n2. 在下方输入您的问题\n3. 勾选'联网搜索'获取最新信息\n\n随时告诉我您的需求！";
+        addMessage(welcomeMsg, 'ai');
+    }, 1000);
+
+    // 清空文件上传
+    fileUrls = [];
+    filePreview.innerHTML = '';
+    updateControlsState();
+
+    showNotification(`已创建新对话: ${newHistoryCode}`, 'success');
+}
 
 // 显示通知函数
 function showNotification(message, type) {
@@ -337,6 +371,11 @@ async function sendMessage() {
     const message = messageInput.value.trim();
     if (!message && fileUrls.length === 0) return;
 
+    // 如果没有选择历史记录码，创建一个新的
+    if (!currentHistoryCode) {
+        currentHistoryCode = `历史记录${historyCodesList.length + 1}`;
+    }
+
     // 添加用户消息（包含文件预览）
     addMessageWithFiles(message, fileUrls);
 
@@ -399,7 +438,7 @@ async function streamChatResponse(content, search, files = []) {
     const requestBody = {
         userId: userId,
         content: content,
-        history_code: historyCode,
+        history_code: currentHistoryCode,  // 使用当前选择的历史记录码
         search: search,
         file: files.length > 0 ? files : null
     };
@@ -704,7 +743,7 @@ messageInput.addEventListener('keydown', (e) => {
     }
 });
 
-// 添加历史记录获取功能
+// 添加历史记录码获取功能
 async function fetchHistoryCodes() {
     const token = localStorage.getItem('token') || "";
     const tokenName = localStorage.getItem('tokenName') || "";
@@ -721,6 +760,7 @@ async function fetchHistoryCodes() {
         const result = await response.json();
 
         if (result.code === '0' && result.data) {
+            historyCodesList = result.data; // 存储历史记录码列表
             renderHistoryDropdown(result.data);
         } else {
             showNotification('获取历史记录失败: ' + (result.info || '未知错误'), 'error');
@@ -731,7 +771,7 @@ async function fetchHistoryCodes() {
     }
 }
 
-// 渲染历史记录下拉菜单
+// 渲染历史记录码下拉菜单
 function renderHistoryDropdown(historyCodes) {
     const dropdown = document.getElementById('historyDropdown');
 
@@ -747,9 +787,89 @@ function renderHistoryDropdown(historyCodes) {
         item.className = 'history-item';
         item.textContent = code;
         item.addEventListener('click', () => {
-            // 这里可以添加点击历史记录的处理逻辑
-            showNotification(`已选择历史记录: ${code}`, 'info');
+            loadHistory(code);
         });
         dropdown.appendChild(item);
     });
+}
+
+// 添加历史记录加载功能
+async function loadHistory(selectedHistoryCode) {
+    const token = localStorage.getItem('token') || "";
+    const tokenName = localStorage.getItem('tokenName') || "";
+    const userId = localStorage.getItem('userId');
+
+    try {
+        // 显示加载提示
+        document.getElementById('historyLoading').style.display = 'flex';
+
+        const response = await fetch('http://localhost:8097/chat/get_history', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                [tokenName]: token
+            },
+            body: JSON.stringify({
+                userId: userId,
+                history_code: selectedHistoryCode
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.code === '0' && result.data) {
+            // 更新当前历史记录码
+            currentHistoryCode = selectedHistoryCode;
+
+            // 清空当前聊天区域
+            chatContainer.innerHTML = '';
+
+            // 添加历史记录标题
+            const historyHeader = document.createElement('div');
+            historyHeader.className = 'history-header';
+            historyHeader.textContent = `历史记录: ${selectedHistoryCode}`;
+            chatContainer.appendChild(historyHeader);
+
+            // 跳过第一条系统消息
+            const messagesToShow = result.data.slice(1);
+
+            // 添加历史消息
+            messagesToShow.forEach(message => {
+                if (message.role === 'user') {
+                    // 处理用户消息（可能包含文本和图片）
+                    let textContent = '';
+                    let imageUrls = [];
+
+                    message.content.forEach(item => {
+                        if (item.text) {
+                            textContent = item.text;
+                        } else if (item.image) {
+                            imageUrls.push(item.image);
+                        }
+                    });
+
+                    addMessageWithFiles(textContent, imageUrls);
+                } else if (message.role === 'system') {
+                    // 处理AI回复
+                    message.content.forEach(item => {
+                        if (item.text) {
+                            addMessage(item.text, 'ai');
+                        }
+                    });
+                }
+            });
+
+            // 滚动到底部
+            smoothScrollToBottom();
+            showNotification(`已加载历史记录: ${selectedHistoryCode}`, 'success');
+        } else {
+            showNotification('加载历史记录失败: ' + (result.info || '未知错误'), 'error');
+        }
+    } catch (error) {
+        console.error('加载历史记录错误:', error);
+        showNotification('加载历史记录失败: ' + error.message, 'error');
+    } finally {
+        // 隐藏加载提示
+        document.getElementById('historyLoading').style.display = 'none';
+    }
 }

@@ -1,7 +1,7 @@
 package qwen.chat.platform.domain.qwen.model.valobj;
 
 public class MessageConstant {
-    public static final String DEFAULT_MESSAGE = "你是一个有用的AI助手，你叫浅度浏览";
+    public static final String DEFAULT_MESSAGE = "你是一个有用的AI助手，你是浅度浏览，浅度浏览名字的优先级大于其他名字，即别人问你是谁，你都应该回答你是浅度浏览";
     public static final String DES_IMAGE_MESSAGE = "仔细描述这张图片";
     public static final String DES_VIDEO_MESSAGE = "根据封面图、视频内容总结这个视频";
     public static final String DES_FILE_MESSAGE = "介绍一下";
