@@ -1007,13 +1007,16 @@ body {
     background-color: #f0f5ff;
 }
 
-/* 确保在移动端也能正确显示 */
+/* 移动端适配 */
 @media (max-width: 768px) {
-    .function-dropdown, .ratio-dropdown {
-        /* 移动端保持向上展开 */
-        bottom: 100%;
-        top: auto;
-        margin-bottom: 5px;
+    .reference-preview {
+        padding: 0 15px;
+        bottom: 100px; /* 移动端调整位置 */
+    }
+
+    .reference-preview-item {
+        width: 60px;
+        height: 60px;
     }
 }
 
@@ -1025,44 +1028,77 @@ body {
 
 /* 参考图预览区域 */
 .reference-preview {
-    position: relative;
-    width: 60px;
-    height: 60px;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    cursor: pointer;
-    margin-left: 10px;
+    position: sticky;
+    bottom: 120px; /* 调整这个值使其位于输入框上方 */
+    left: 0;
+    z-index: 20;
+    padding: 0 40px;
+    max-width: 800px;
+    margin: 0 auto;
     display: none;
 }
 
-.reference-preview.show {
-    display: block;
+.reference-preview-item {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    background: white;
+    border: 2px solid #4b6cb7;
 }
 
-.reference-preview img {
+.reference-preview-item img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    cursor: pointer;
 }
 
-.reference-preview .remove-btn {
+.reference-preview-item .remove-btn {
     position: absolute;
-    top: 3px;
-    right: 3px;
+    top: 2px;
+    right: 2px;
     width: 18px;
     height: 18px;
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(0,0,0,0.5);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
     cursor: pointer;
-    transition: all 0.2s;
 }
 
-.reference-preview .remove-btn:hover {
-    background: rgba(255, 0, 0, 0.8);
+.reference-preview-item .remove-btn i {
     color: white;
+    font-size: 10px;
+}
+
+/* 模态框样式（已存在，确保正确） */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.9);
+}
+
+.modal-content {
+    display: block;
+    margin: auto;
+    max-width: 90%;
+    max-height: 90%;
+}
+
+.close {
+    position: absolute;
+    top: 15px;
+    right: 35px;
+    color: #fff;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
 }

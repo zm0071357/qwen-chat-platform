@@ -483,14 +483,14 @@ function createPreviewItem(file, isLoading = false) {
     return previewItem;
 }
 
-// 移除文件
-function removeFile(url, element) {
-    fileUrls = fileUrls.filter(u => u !== url);
-    element.remove();
-
-    // 更新控件状态
-    updateControlsState();
-}
+// // 移除文件
+// function removeFile(url, element) {
+//     fileUrls = fileUrls.filter(u => u !== url);
+//     element.remove();
+//
+//     // 更新控件状态
+//     updateControlsState();
+// }
 
 // 发送消息函数（支持文件上传）
 async function sendMessage() {
@@ -1051,9 +1051,8 @@ async function handleReferenceImageUpload(e) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const file = files[0]; // 参考图只支持单张
-    const preview = document.getElementById('referencePreview');
-    const previewImg = document.getElementById('referenceImagePreview');
+    const file = files[0];
+    const filePreview = document.getElementById('filePreview');
 
     // 检查文件类型
     if (!file.type.startsWith('image/')) {
@@ -1068,6 +1067,14 @@ async function handleReferenceImageUpload(e) {
     // 显示上传中
     referenceImageButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
     referenceImageButton.disabled = true;
+
+    // 清除之前的参考图
+    filePreview.innerHTML = ''; // 清空预览区域
+    fileUrls = []; // 清空文件URL数组
+
+    // 显示临时预览（使用文件预览区域）
+    const previewItem = createPreviewItem(file, true); // true表示显示加载中
+    filePreview.appendChild(previewItem);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -1085,22 +1092,61 @@ async function handleReferenceImageUpload(e) {
         const result = await response.json();
 
         if (result.code === '0' && result.data && result.data.url) {
-            referenceImageUrl = result.data.url;
+            const url = result.data.url;
+            fileUrls.push(url); // 添加到文件URL数组
+
+            // 更新预览项为实际图片
+            previewItem.innerHTML = `
+                <img src="${url}" alt="${file.name}">
+                <div class="remove-btn"><i class="fas fa-times"></i></div>
+            `;
+
+            // 添加删除事件
+            previewItem.querySelector('.remove-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                removeFile(url, previewItem);
+                // 同时更新参考图按钮状态
+                referenceImageButton.innerHTML = '<i class="fas fa-image"></i> 上传参考图';
+                referenceImageButton.classList.remove('active');
+            });
+
+            // 添加点击预览事件
+            previewItem.addEventListener('click', () => {
+                previewImage.src = url;
+                imagePreviewModal.style.display = 'block';
+            });
+
             referenceImageButton.innerHTML = '<i class="fas fa-image"></i> 参考图已上传';
             referenceImageButton.classList.add('active');
             showNotification('参考图上传成功', 'success');
         } else {
             showNotification('参考图上传失败: ' + (result.info || '未知错误'), 'error');
+            previewItem.remove(); // 移除预览项
             referenceImageButton.innerHTML = '<i class="fas fa-image"></i> 上传参考图';
         }
     } catch (error) {
         showNotification('参考图上传失败: ' + error.message, 'error');
+        previewItem.remove(); // 移除预览项
         referenceImageButton.innerHTML = '<i class="fas fa-image"></i> 上传参考图';
         console.error('参考图上传错误:', error);
     } finally {
         referenceImageButton.disabled = false;
         referenceImageInput.value = '';
     }
+}
+
+// 移除文件函数（现在也用于移除参考图）
+function removeFile(url, element) {
+    fileUrls = fileUrls.filter(u => u !== url);
+    element.remove();
+
+    // 如果是参考图，更新按钮状态
+    if (document.getElementById('referenceImageButton').classList.contains('active')) {
+        referenceImageButton.innerHTML = '<i class="fas fa-image"></i> 上传参考图';
+        referenceImageButton.classList.remove('active');
+    }
+
+    updateControlsState();
 }
 
 // 显示预览图点击事件
@@ -1110,10 +1156,6 @@ document.getElementById('referencePreview').addEventListener('click', () => {
         document.getElementById('imagePreviewModal').style.display = 'block';
     }
 });
-
-
-
-
 
 // 发送消息函数（支持文件上传）
 async function sendMessage() {
