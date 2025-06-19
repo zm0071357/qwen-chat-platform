@@ -969,3 +969,100 @@ body {
 .sidebar.collapsed .menu-item:nth-child(3) span {
     display: none;
 }
+
+/* 下拉菜单样式 */
+.action-btn-group {
+    position: relative;
+    display: inline-block;
+}
+
+/* 修改下拉菜单为上拉样式 */
+.function-dropdown, .ratio-dropdown {
+    position: absolute;
+    /* 修改为从底部向上展开 */
+    bottom: 100%;
+    left: 0;
+    /* 添加底部间距 */
+    margin-bottom: 5px;
+    background: white;
+    /* 调整圆角方向 */
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1); /* 阴影在上方 */
+    z-index: 100;
+    min-width: 150px;
+    display: none;
+    overflow: hidden;
+}
+
+.dropdown-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+    color: #333;
+    text-align: left;
+}
+
+.dropdown-item:hover {
+    background-color: #f0f5ff;
+}
+
+/* 确保在移动端也能正确显示 */
+@media (max-width: 768px) {
+    .function-dropdown, .ratio-dropdown {
+        /* 移动端保持向上展开 */
+        bottom: 100%;
+        top: auto;
+        margin-bottom: 5px;
+    }
+}
+
+/* 在文件末尾添加 */
+/* 控件显示控制 */
+.hidden-control {
+    display: none !important;
+}
+
+/* 参考图预览区域 */
+.reference-preview {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    margin-left: 10px;
+    display: none;
+}
+
+.reference-preview.show {
+    display: block;
+}
+
+.reference-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.reference-preview .remove-btn {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 18px;
+    height: 18px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.reference-preview .remove-btn:hover {
+    background: rgba(255, 0, 0, 0.8);
+    color: white;
+}

@@ -10,6 +10,17 @@ window.addEventListener('load', () => {
     const previewImage = document.getElementById('previewImage');
     const modalClose = document.getElementById('modalClose');
     const searchButton = document.getElementById('searchButton'); // 新添加的搜索按钮
+    // 新增图片创作相关DOM
+    const functionButton = document.getElementById('functionButton');
+    const functionDropdown = document.getElementById('functionDropdown');
+    const ratioButton = document.getElementById('ratioButton');
+    const ratioDropdown = document.getElementById('ratioDropdown');
+    const referenceImageButton = document.getElementById('referenceImageButton');
+    const referenceImageInput = document.getElementById('referenceImageInput');
+
+    // 获取两组按钮容器
+    const defaultActionButtons = document.getElementById('defaultActionButtons');
+    const imageActionButtons = document.getElementById('imageActionButtons');
 
     if (!userId || !token) {
         showNotification('请先登录', 'error');
@@ -50,6 +61,106 @@ window.addEventListener('load', () => {
 
     // 获取历史记录
     fetchHistoryCodes();
+
+    // 图片创作模式相关事件
+    functionButton.addEventListener('click', () => {
+        functionDropdown.style.display = functionDropdown.style.display === 'block' ? 'none' : 'block';
+        ratioDropdown.style.display = 'none';
+    });
+
+    // 在功能选择下拉菜单的点击事件中修改
+    functionDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const previousFunction = functionButton.querySelector('span').textContent;
+            const selectedFunction = item.getAttribute('data-value');
+
+            functionButton.querySelector('span').textContent = item.textContent;
+            functionButton.classList.add('active');
+            functionDropdown.style.display = 'none';
+
+            // 如果之前选择了"生成图片"，现在切换到了其他功能，清除比例选择
+            if (previousFunction === '生成图片' && selectedFunction !== 'generate') {
+                ratioButton.querySelector('span').textContent = '比例大小';
+                ratioButton.classList.remove('active');
+            }
+
+            // 如果之前选择了非"生成图片"功能，现在切换到"生成图片"，清除参考图
+            if (previousFunction !== '生成图片' && selectedFunction === 'generate') {
+                referenceImageUrl = null;
+                referenceImageButton.querySelector('span').textContent = '上传参考图';
+                referenceImageButton.classList.remove('active');
+            }
+
+            // 只有选择生成图片时，比例大小才可用
+            if (selectedFunction === 'generate') {
+                ratioButton.disabled = false;
+                ratioButton.classList.remove('disabled');
+                referenceImageButton.disabled = true;
+                referenceImageButton.classList.add('disabled');
+            } else {
+                ratioButton.disabled = true;
+                ratioButton.classList.add('disabled');
+
+                // 如果选择的是指令编辑、去文字水印、扩图、图像超分、图像上色，则启用上传参考图
+                const referenceFunctions = ['edit', 'removeWatermark', 'expand', 'superResolution', 'colorize'];
+                if (referenceFunctions.includes(selectedFunction)) {
+                    referenceImageButton.disabled = false;
+                    referenceImageButton.classList.remove('disabled');
+                } else {
+                    referenceImageButton.disabled = true;
+                    referenceImageButton.classList.add('disabled');
+                }
+            }
+        });
+    });
+
+    // 修改比例按钮点击事件
+    ratioButton.addEventListener('click', () => {
+        if (ratioButton.disabled) {
+            showNotification('请先选择功能', 'error');
+            return;
+        }
+        ratioDropdown.style.display = ratioDropdown.style.display === 'block' ? 'none' : 'block';
+        functionDropdown.style.display = 'none';
+    });
+
+    // 修改参考图按钮点击事件
+    referenceImageButton.addEventListener('click', () => {
+        if (referenceImageButton.disabled) {
+            showNotification('请先选择功能', 'error');
+            return;
+        }
+        referenceImageInput.click();
+    });
+
+    ratioDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+        item.addEventListener('click', () => {
+            ratioButton.querySelector('span').textContent = item.textContent;
+            ratioButton.classList.add('active');
+            ratioDropdown.style.display = 'none';
+        });
+    });
+
+    referenceImageButton.addEventListener('click', () => {
+        if (referenceImageButton.disabled) {
+            showNotification('请先选择功能', 'error');
+            return;
+        }
+        referenceImageInput.click();
+    });
+
+    referenceImageInput.addEventListener('change', handleReferenceImageUpload);
+
+    // 点击其他地方关闭下拉菜单
+    document.addEventListener('click', (e) => {
+        if (!functionButton.contains(e.target) && !functionDropdown.contains(e.target)) {
+            functionDropdown.style.display = 'none';
+        }
+        if (!ratioButton.contains(e.target) && !ratioDropdown.contains(e.target)) {
+            ratioDropdown.style.display = 'none';
+        }
+    });
+
 });
 
 // 获取DOM元素
@@ -72,9 +183,11 @@ let isStreaming = false;
 let currentAIResponse = null;
 let isSearchEnabled = true; // 默认开启搜索
 let historyCodesList = []; // 存储历史记录码列表
-
 // 声明文件URL数组
 let fileUrls = [];
+// 全局变量
+let referenceImageUrl = null; // 用于存储参考图的URL
+let currentMode = 'default'; // 'default' 或 'image'
 
 // 更新控件状态函数
 function updateControlsState() {
@@ -175,12 +288,22 @@ menuItems.forEach(item => {
         // 根据点击的菜单项显示不同内容
         const menuText = item.querySelector('span').textContent;
         if(menuText === '图片创作') {
+            // 隐藏默认按钮组，显示图片创作按钮组
+            defaultActionButtons.style.display = 'none';
+            imageActionButtons.style.display = 'flex';
             addMessage("您已切换到图片创作模式。请描述您想要生成的图片内容，例如：'生成一份薯条'", 'ai');
         } else if(menuText === '代码助手') {
+            // 显示默认按钮组，隐藏图片创作按钮组
+            defaultActionButtons.style.display = 'flex';
+            imageActionButtons.style.display = 'none';
             addMessage("您已切换到代码助手模式。请描述您的编程需求，例如：'用Java写一个冒泡排序'", 'ai');
-        } else if(menuText === '视频创作') { // 添加视频创作模式
+        } else if(menuText === '视频创作') {
+            defaultActionButtons.style.display = 'flex';
+            imageActionButtons.style.display = 'none';
             addMessage("您已切换到视频创作模式。请描述您想要生成的视频内容，例如：'一只小猫在草地上奔跑'", 'ai');
         } else if(menuText === '新对话') {
+            defaultActionButtons.style.display = 'flex';
+            imageActionButtons.style.display = 'none';
             startNewConversation();
         }
     });
@@ -190,6 +313,7 @@ menuItems.forEach(item => {
 function startNewConversation() {
     // 生成新的历史记录码
     const newHistoryCode = `历史记录${historyCodesList.length + 1}`;
+
     currentHistoryCode = newHistoryCode;
 
     // 清空聊天区域
@@ -202,6 +326,17 @@ function startNewConversation() {
             <p>我可以帮你写代码、生成图片/视频，请把你的任务交给我吧~</p>
         </div>
     `;
+
+    referenceImageUrl = null;
+    // 重置图片创作按钮
+    functionButton.querySelector('span').textContent = '功能选择';
+    functionButton.classList.remove('active');
+    ratioButton.querySelector('span').textContent = '比例大小';
+    ratioButton.classList.remove('active');
+    referenceImageButton.classList.remove('active');
+    // 重置按钮状态
+    ratioButton.disabled = true;
+    referenceImageButton.disabled = true;
 
     // 添加欢迎消息
     setTimeout(() => {
@@ -874,4 +1009,126 @@ async function loadHistory(selectedHistoryCode) {
         // 隐藏加载提示
         document.getElementById('historyLoading').style.display = 'none';
     }
+}
+
+async function handleReferenceImageUpload(e) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0]; // 参考图只支持单张
+
+    // 检查文件类型
+    if (!file.type.startsWith('image/')) {
+        showNotification('请上传图片文件', 'error');
+        return;
+    }
+
+    const token = localStorage.getItem('token') || "";
+    const tokenName = localStorage.getItem('tokenName') || "";
+    const userId = localStorage.getItem('userId');
+
+    // 显示上传中
+    referenceImageButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
+    referenceImageButton.disabled = true;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('userId', userId);
+
+    try {
+        const response = await fetch('http://localhost:8097/create/upload_image', {
+            method: 'POST',
+            headers: {
+                [tokenName]: token
+            },
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.code === '0' && result.data && result.data.url) {
+            referenceImageUrl = result.data.url;
+            referenceImageButton.innerHTML = '<i class="fas fa-image"></i> 参考图已上传';
+            referenceImageButton.classList.add('active');
+            showNotification('参考图上传成功', 'success');
+        } else {
+            showNotification('参考图上传失败: ' + (result.info || '未知错误'), 'error');
+            referenceImageButton.innerHTML = '<i class="fas fa-image"></i> 上传参考图';
+        }
+    } catch (error) {
+        showNotification('参考图上传失败: ' + error.message, 'error');
+        referenceImageButton.innerHTML = '<i class="fas fa-image"></i> 上传参考图';
+        console.error('参考图上传错误:', error);
+    } finally {
+        referenceImageButton.disabled = false;
+        referenceImageInput.value = '';
+    }
+}
+
+
+
+
+
+// 发送消息函数（支持文件上传）
+async function sendMessage() {
+    if (isStreaming) return;
+
+    const message = messageInput.value.trim();
+
+    if (currentMode === 'image') {
+        // 图片创作模式发送逻辑
+        if (!message && !referenceImageUrl) return;
+
+        // 如果没有选择功能
+        if (!functionButton.classList.contains('active')) {
+            showNotification('请先选择功能', 'error');
+            return;
+        }
+
+        // 构建图片创作请求
+        const requestData = {
+            userId: userId,
+            historyCode: currentHistoryCode || `历史记录${historyCodesList.length + 1}`,
+            commandType: getCommandTypeByFunction(), // 根据功能选择返回对应的命令类型
+            content: message,
+            sizeType: getSizeTypeByRatio(), // 根据比例大小返回对应的尺寸类型
+            refer: referenceImageUrl // 参考图URL
+        };
+
+        // 发送请求...
+        // 这里需要根据实际接口实现
+
+        showNotification('图片创作请求已发送', 'success');
+    } else {
+        // 默认模式
+        // ... 原有代码保持不变 ...
+    }
+}
+
+// 根据功能选择获取命令类型
+function getCommandTypeByFunction() {
+    const functionText = functionButton.querySelector('span').textContent;
+    // 这里需要根据按钮文本返回对应的命令类型枚举值
+    // 示例映射关系：
+    const functionMap = {
+        '生成图片': 1,
+        '指令编辑': 2,
+        '去文字水印': 3,
+        '扩图': 4,
+        '图像超分': 5,
+        '图像上色': 6
+    };
+    return functionMap[functionText] || 1; // 默认生成图片
+}
+
+// 根据比例大小获取尺寸类型
+function getSizeTypeByRatio() {
+    const ratioText = ratioButton.querySelector('span').textContent;
+    const ratioMap = {
+        '1:1': 1,
+        '4:3': 2,
+        '9:16': 3,
+        '16:9': 4
+    };
+    return ratioMap[ratioText] || 1; // 默认1:1
 }
