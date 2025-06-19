@@ -14,6 +14,7 @@ public enum UploadFileResultEnum {
     USER_NOT_EXIST(1, "用户不存在"),
     NULL_PARAMETER(1, "上传失败：必要参数为空"),
     ILLEGAL(1, "上传失败：参数非法"),
+    MUST_IMAGE(1, "上传失败：请上传图片格式文件"),
     ;
 
     private Integer code;

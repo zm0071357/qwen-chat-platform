@@ -178,6 +178,8 @@ menuItems.forEach(item => {
             addMessage("您已切换到图片创作模式。请描述您想要生成的图片内容，例如：'生成一份薯条'", 'ai');
         } else if(menuText === '代码助手') {
             addMessage("您已切换到代码助手模式。请描述您的编程需求，例如：'用Java写一个冒泡排序'", 'ai');
+        } else if(menuText === '视频创作') { // 添加视频创作模式
+            addMessage("您已切换到视频创作模式。请描述您想要生成的视频内容，例如：'一只小猫在草地上奔跑'", 'ai');
         } else if(menuText === '新对话') {
             startNewConversation();
         }

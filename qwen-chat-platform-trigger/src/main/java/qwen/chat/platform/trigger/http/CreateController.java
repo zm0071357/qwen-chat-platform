@@ -4,9 +4,11 @@ import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import qwen.chat.platform.api.CreateService;
 import qwen.chat.platform.api.dto.ImageRequestDTO;
 import qwen.chat.platform.api.dto.CreateResponseDTO;
+import qwen.chat.platform.api.dto.UploadFileResponseDTO;
 import qwen.chat.platform.api.dto.VideoRequestDTO;
 import qwen.chat.platform.api.response.Response;
 import qwen.chat.platform.domain.login.UserService;
@@ -14,12 +16,11 @@ import qwen.chat.platform.domain.qwen.QwenCreateService;
 import qwen.chat.platform.domain.qwen.model.entity.CreateImageEntity;
 import qwen.chat.platform.domain.qwen.model.entity.CreateVideoEntity;
 import qwen.chat.platform.domain.qwen.model.entity.ResponseEntity;
-import qwen.chat.platform.domain.qwen.model.valobj.ChatResultEnum;
-import qwen.chat.platform.domain.qwen.model.valobj.CommandTypeEnum;
-import qwen.chat.platform.domain.qwen.model.valobj.CreateResultEnum;
-import qwen.chat.platform.domain.qwen.model.valobj.SizeTypeEnum;
+import qwen.chat.platform.domain.qwen.model.valobj.*;
+import qwen.chat.platform.types.utils.AliOSSUtils;
 
 import javax.annotation.Resource;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/create")
@@ -33,6 +34,9 @@ public class CreateController implements CreateService {
 
     @Resource
     private QwenCreateService qwenCreateService;
+
+    @Resource
+    private AliOSSUtils aliOSSUtils;
 
     @PostMapping("/image")
     @Override
@@ -142,4 +146,55 @@ public class CreateController implements CreateService {
         }
     }
 
+    @PostMapping("/upload_image")
+    @Override
+    public Response<UploadFileResponseDTO> uploadImage(@RequestParam("file") MultipartFile file,
+                                                      @RequestParam("userId") String userId) {
+        // 参数校验
+        if (file == null || userId == null) {
+            return Response.<UploadFileResponseDTO>builder()
+                    .code(String.valueOf(UploadFileResultEnum.NULL_PARAMETER.getCode()))
+                    .info(UploadFileResultEnum.NULL_PARAMETER.getInfo())
+                    .build();
+        }
+        // 参数合法性校验
+        if (!StpUtil.getLoginIdAsString().equals(userId)) {
+            return Response.<UploadFileResponseDTO>builder()
+                    .code(String.valueOf(UploadFileResultEnum.ILLEGAL.getCode()))
+                    .info(UploadFileResultEnum.ILLEGAL.getInfo())
+                    .build();
+        }
+        // 判断文件是否是图片格式
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            return Response.<UploadFileResponseDTO>builder()
+                    .code(String.valueOf(UploadFileResultEnum.MUST_IMAGE.getCode()))
+                    .info(UploadFileResultEnum.MUST_IMAGE.getInfo())
+                    .build();
+        }
+        if (userService.checkUserIsExist(userId)) {
+            try {
+                // 上传操作
+                String url = aliOSSUtils.upload(file);
+                log.info("url:{}", url);
+                return Response.<UploadFileResponseDTO>builder()
+                        .code(String.valueOf(UploadFileResultEnum.SUCCESS.getCode()))
+                        .data(UploadFileResponseDTO.builder()
+                                .url(url)
+                                .build())
+                        .info(UploadFileResultEnum.SUCCESS.getInfo())
+                        .build();
+            } catch (IOException e) {
+                return Response.<UploadFileResponseDTO>builder()
+                        .code(String.valueOf(UploadFileResultEnum.FAILED.getCode()))
+                        .info(UploadFileResultEnum.FAILED.getInfo())
+                        .build();
+            }
+        } else {
+            return Response.<UploadFileResponseDTO>builder()
+                    .code(String.valueOf(UploadFileResultEnum.USER_NOT_EXIST.getCode()))
+                    .info(UploadFileResultEnum.USER_NOT_EXIST.getInfo())
+                    .build();
+        }
+    }
 }

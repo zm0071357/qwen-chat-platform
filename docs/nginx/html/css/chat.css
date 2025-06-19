@@ -942,3 +942,30 @@ body {
     margin-right: 10px;
     font-size: 20px;
 }
+
+/* 在原有样式基础上添加以下内容 */
+
+/* 确保新菜单项有悬停效果 */
+.sidebar-menu .menu-item:nth-child(3):hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* 确保新菜单项在侧边栏折叠时图标居中 */
+.sidebar.collapsed .menu-item:nth-child(3) {
+    display: flex;
+    justify-content: center;
+    padding: 14px 0;
+}
+
+/* 确保新菜单项图标样式与其他一致 */
+.sidebar-menu .menu-item:nth-child(3) i {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+    margin-right: 15px;
+    transition: all 0.2s;
+}
+
+.sidebar.collapsed .menu-item:nth-child(3) span {
+    display: none;
+}
