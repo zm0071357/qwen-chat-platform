@@ -8,15 +8,18 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
 import qwen.chat.platform.api.ChatService;
 import qwen.chat.platform.api.dto.ChatRequestDTO;
+import qwen.chat.platform.api.dto.HistoryRequestDTO;
 import qwen.chat.platform.api.dto.UploadFileResponseDTO;
 import qwen.chat.platform.api.response.Response;
 import qwen.chat.platform.domain.login.UserService;
 import qwen.chat.platform.domain.qwen.QwenService;
 import qwen.chat.platform.domain.qwen.model.entity.MessageEntity;
 import qwen.chat.platform.domain.qwen.model.valobj.ChatResultEnum;
+import qwen.chat.platform.domain.qwen.model.valobj.HistoryEnum;
 import qwen.chat.platform.domain.qwen.model.valobj.MessageTypeEnum;
 import qwen.chat.platform.domain.qwen.model.valobj.UploadFileResultEnum;
 import qwen.chat.platform.types.utils.AliOSSUtils;
+import qwen.sdk.largemodel.chat.model.ChatRequest;
 
 import javax.annotation.Resource;
 import java.io.IOException;
@@ -87,6 +90,13 @@ public class ChatController implements ChatService {
                             .info(UploadFileResultEnum.NULL_PARAMETER.getInfo())
                             .build();
         }
+        // 参数合法性校验
+        if (!StpUtil.getLoginIdAsString().equals(userId)) {
+            Response.<UploadFileResponseDTO>builder()
+                    .code(String.valueOf(UploadFileResultEnum.ILLEGAL.getCode()))
+                    .info(UploadFileResultEnum.ILLEGAL.getInfo())
+                    .build();
+        }
         if (userService.checkUserIsExist(userId)) {
             try {
                 // 上传操作
@@ -109,6 +119,73 @@ public class ChatController implements ChatService {
             return Response.<UploadFileResponseDTO>builder()
                     .code(String.valueOf(UploadFileResultEnum.USER_NOT_EXIST.getCode()))
                     .info(UploadFileResultEnum.USER_NOT_EXIST.getInfo())
+                    .build();
+        }
+    }
+
+    @GetMapping("/get_history_code_list/{userId}")
+    @Override
+    public Response<List<String>> getHistoryCodeList(@PathVariable("userId") String userId) {
+        // 参数非空校验
+        if (userId == null) {
+            return Response.<List<String>>builder()
+                    .code(String.valueOf(HistoryEnum.NULL_PARAMETER.getCode()))
+                    .info(HistoryEnum.NULL_PARAMETER.getInfo())
+                    .build();
+        }
+        // 参数合法性校验
+        if (!StpUtil.getLoginIdAsString().equals(userId)) {
+            return Response.<List<String>>builder()
+                    .code(String.valueOf(HistoryEnum.ILLEAGAL.getCode()))
+                    .info(HistoryEnum.ILLEAGAL.getInfo())
+                    .build();
+        }
+        if (userService.checkUserIsExist(userId)) {
+            List<String> historyCodeList = qwenService.getHistoryCodeList(userId);
+            return Response.<List<String>>builder()
+                    .code(String.valueOf(HistoryEnum.SUCCESS.getCode()))
+                    .data(historyCodeList)
+                    .info(HistoryEnum.SUCCESS.getInfo())
+                    .build();
+        } else {
+            return Response.<List<String>>builder()
+                    .code(String.valueOf(HistoryEnum.USER_NOT_EXIST.getCode()))
+                    .info(HistoryEnum.USER_NOT_EXIST.getInfo())
+                    .build();
+        }
+    }
+
+    @GetMapping("/get_history")
+    @Override
+    public Response<List<ChatRequest.Input.Message>> getHistory(@RequestBody HistoryRequestDTO historyRequestDTO) {
+        // 参数
+        String userId = historyRequestDTO.getUserId();
+        String historyCode = historyRequestDTO.getHistoryCode();
+        // 参数非空校验
+        if (userId == null || historyCode == null) {
+            return Response.<List<ChatRequest.Input.Message>>builder()
+                    .code(String.valueOf(HistoryEnum.NULL_PARAMETER.getCode()))
+                    .info(HistoryEnum.NULL_PARAMETER.getInfo())
+                    .build();
+        }
+        // 参数合法性校验
+        if (!StpUtil.getLoginIdAsString().equals(userId)) {
+            return Response.<List<ChatRequest.Input.Message>>builder()
+                    .code(String.valueOf(HistoryEnum.ILLEAGAL.getCode()))
+                    .info(HistoryEnum.ILLEAGAL.getInfo())
+                    .build();
+        }
+        if (userService.checkUserIsExist(userId)) {
+            List<ChatRequest.Input.Message> messages = qwenService.getHistory(userId, historyCode);
+            return Response.<List<ChatRequest.Input.Message>>builder()
+                    .code(String.valueOf(HistoryEnum.SUCCESS.getCode()))
+                    .data(messages)
+                    .info(HistoryEnum.SUCCESS.getInfo())
+                    .build();
+        } else {
+            return Response.<List<ChatRequest.Input.Message>>builder()
+                    .code(String.valueOf(HistoryEnum.USER_NOT_EXIST.getCode()))
+                    .info(HistoryEnum.USER_NOT_EXIST.getInfo())
                     .build();
         }
     }

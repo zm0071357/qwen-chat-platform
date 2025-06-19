@@ -47,6 +47,9 @@ window.addEventListener('load', () => {
 
     // 搜索按钮点击事件
     searchButton.addEventListener('click', toggleSearch);
+
+    // 获取历史记录
+    fetchHistoryCodes()
 });
 
 // 获取DOM元素
@@ -700,3 +703,53 @@ messageInput.addEventListener('keydown', (e) => {
         sendMessage();
     }
 });
+
+// 添加历史记录获取功能
+async function fetchHistoryCodes() {
+    const token = localStorage.getItem('token') || "";
+    const tokenName = localStorage.getItem('tokenName') || "";
+    const userId = localStorage.getItem('userId');
+
+    try {
+        const response = await fetch(`http://localhost:8097/chat/get_history_code_list/${userId}`, {
+            method: 'GET',
+            headers: {
+                [tokenName]: token
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.code === '0' && result.data) {
+            renderHistoryDropdown(result.data);
+        } else {
+            showNotification('获取历史记录失败: ' + (result.info || '未知错误'), 'error');
+        }
+    } catch (error) {
+        console.error('获取历史记录错误:', error);
+        showNotification('获取历史记录失败: ' + error.message, 'error');
+    }
+}
+
+// 渲染历史记录下拉菜单
+function renderHistoryDropdown(historyCodes) {
+    const dropdown = document.getElementById('historyDropdown');
+
+    if (!historyCodes || historyCodes.length === 0) {
+        dropdown.innerHTML = '<div class="history-empty">暂无历史记录</div>';
+        return;
+    }
+
+    dropdown.innerHTML = '';
+
+    historyCodes.forEach(code => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.textContent = code;
+        item.addEventListener('click', () => {
+            // 这里可以添加点击历史记录的处理逻辑
+            showNotification(`已选择历史记录: ${code}`, 'info');
+        });
+        dropdown.appendChild(item);
+    });
+}

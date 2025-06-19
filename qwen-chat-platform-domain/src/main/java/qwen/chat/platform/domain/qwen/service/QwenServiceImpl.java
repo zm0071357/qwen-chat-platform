@@ -43,4 +43,13 @@ public class QwenServiceImpl extends DefaultQwenService {
         return qwenRepository.chat(messages, content, search, historyCode, userId);
     }
 
+    @Override
+    public List<ChatRequest.Input.Message> getHistory(String userId, String historyCode) {
+        return qwenRepository.getHistory(userId, historyCode);
+    }
+
+    @Override
+    public List<String> getHistoryCodeList(String userId) {
+        return qwenRepository.getHistoryCodeList(userId);
+    }
 }

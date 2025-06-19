@@ -17,6 +17,13 @@
         where user_id = #{userId} and history_code = #{historyCode}
     </select>
 
+    <select id="getHistoryCodeList" resultType="java.lang.String">
+        select history_code
+        from history
+        where user_id = #{userId}
+        order by update_time desc
+    </select>
+
     <insert id="insert" parameterType="qwen.chat.platform.infrastructure.dao.po.History">
         insert into history (user_id, history_code, history_json, create_time, update_time) values
         (#{userId}, #{historyCode}, #{historyJson}, now(), now())

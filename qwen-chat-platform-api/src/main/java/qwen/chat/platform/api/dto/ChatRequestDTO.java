@@ -3,7 +3,6 @@ package qwen.chat.platform.api.dto;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
-import qwen.chat.platform.domain.qwen.model.valobj.File;
 
 import java.util.List;
 

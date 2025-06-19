@@ -165,6 +165,11 @@ public class QwenRepositoryImpl implements QwenRepository {
         return this.handle(messages, messageEntity.isSearch(), messageEntity.getHistoryCode(), messageEntity.getUserId(), isSaveHistory);
     }
 
+    @Override
+    public List<String> getHistoryCodeList(String userId) {
+        return qwenDao.getHistoryCodeList(userId);
+    }
+
     /**
      * 获取在线视频链接
      * @param link

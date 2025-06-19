@@ -7,13 +7,13 @@ import lombok.NoArgsConstructor;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-public enum UploadFileResultEnum {
+public enum HistoryEnum {
 
-    SUCCESS(0, "上传成功"),
-    FAILED(1, "上传失败：网络连接失败，请稍后再试"),
+    SUCCESS(0, "获取成功"),
+    FAILED(1, "获取失败"),
+    ILLEAGAL(1, "获取失败：参数非法"),
+    NULL_PARAMETER(1, "获取失败：必要参数为空"),
     USER_NOT_EXIST(1, "用户不存在"),
-    NULL_PARAMETER(1, "上传失败：必要参数为空"),
-    ILLEGAL(1, "上传失败：参数非法"),
     ;
 
     private Integer code;
