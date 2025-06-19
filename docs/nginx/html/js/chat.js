@@ -124,15 +124,6 @@ window.addEventListener('load', () => {
         functionDropdown.style.display = 'none';
     });
 
-    // 修改参考图按钮点击事件
-    referenceImageButton.addEventListener('click', () => {
-        if (referenceImageButton.disabled) {
-            showNotification('请先选择功能', 'error');
-            return;
-        }
-        referenceImageInput.click();
-    });
-
     ratioDropdown.querySelectorAll('.dropdown-item').forEach(item => {
         item.addEventListener('click', () => {
             ratioButton.querySelector('span').textContent = item.textContent;
@@ -880,6 +871,51 @@ messageInput.addEventListener('keydown', (e) => {
     }
 });
 
+document.addEventListener('DOMContentLoaded', () => {
+    // 初始化控件状态 - 默认隐藏比例和参考图控件
+    document.getElementById('ratioButton').classList.add('hidden-control');
+    document.getElementById('referenceImageButton').classList.add('hidden-control');
+
+    // 功能选择下拉菜单点击事件
+    document.querySelectorAll('#functionDropdown .dropdown-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const selectedFunction = item.getAttribute('data-value');
+            const ratioButton = document.getElementById('ratioButton');
+            const referenceButton = document.getElementById('referenceImageButton');
+
+            // 重置所有控件状态
+            ratioButton.classList.add('hidden-control');
+            referenceButton.classList.add('hidden-control');
+
+            // 根据选择的功能显示相应控件
+            if (selectedFunction === 'generate') {
+                // 生成图片 - 显示比例控件
+                ratioButton.classList.remove('hidden-control');
+            } else if (['edit', 'removeWatermark', 'expand', 'superResolution', 'colorize'].includes(selectedFunction)) {
+                // 其他功能 - 显示参考图控件
+                referenceButton.classList.remove('hidden-control');
+            }
+        });
+    });
+
+    // 比例按钮点击事件 - 检查是否选择了功能
+    document.getElementById('ratioButton').addEventListener('click', () => {
+        if (document.getElementById('ratioButton').classList.contains('hidden-control')) {
+            showNotification('请先选择功能', 'error');
+        }
+    });
+
+    // 参考图按钮点击事件 - 检查是否选择了功能
+    document.getElementById('referenceImageButton').addEventListener('click', () => {
+        if (document.getElementById('referenceImageButton').classList.contains('hidden-control')) {
+            showNotification('请先选择功能', 'error');
+        }
+    });
+
+    // 参考图上传处理
+    document.getElementById('referenceImageInput').addEventListener('change', handleReferenceImageUpload);
+});
+
 // 添加历史记录码获取功能
 async function fetchHistoryCodes() {
     const token = localStorage.getItem('token') || "";
@@ -1016,6 +1052,8 @@ async function handleReferenceImageUpload(e) {
     if (!files || files.length === 0) return;
 
     const file = files[0]; // 参考图只支持单张
+    const preview = document.getElementById('referencePreview');
+    const previewImg = document.getElementById('referenceImagePreview');
 
     // 检查文件类型
     if (!file.type.startsWith('image/')) {
@@ -1064,6 +1102,14 @@ async function handleReferenceImageUpload(e) {
         referenceImageInput.value = '';
     }
 }
+
+// 显示预览图点击事件
+document.getElementById('referencePreview').addEventListener('click', () => {
+    if (referenceImageUrl) {
+        document.getElementById('previewImage').src = referenceImageUrl;
+        document.getElementById('imagePreviewModal').style.display = 'block';
+    }
+});
 
 
 

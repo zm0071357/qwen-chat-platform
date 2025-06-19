@@ -1017,7 +1017,7 @@ body {
     }
 }
 
-/* 在文件末尾添加 */
+/* 添加在文件末尾 */
 /* 控件显示控制 */
 .hidden-control {
     display: none !important;
