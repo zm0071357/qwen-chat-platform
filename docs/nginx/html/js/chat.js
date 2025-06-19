@@ -30,6 +30,10 @@ window.addEventListener('load', () => {
         return;
     }
 
+
+    // 获取历史记录
+    fetchHistoryCodes();
+
     // 原有的欢迎消息代码
     setTimeout(() => {
         const welcomeMsg = "欢迎使用浅度浏览！您现在可以：\n\n1. 在左侧边栏选择功能\n2. 在下方输入您的问题\n3. 勾选'联网搜索'获取最新信息\n\n随时告诉我您的需求！";
@@ -59,8 +63,6 @@ window.addEventListener('load', () => {
     // 搜索按钮点击事件
     searchButton.addEventListener('click', toggleSearch);
 
-    // 获取历史记录
-    fetchHistoryCodes();
 
     // 图片创作模式相关事件
     functionButton.addEventListener('click', () => {
@@ -179,6 +181,8 @@ let fileUrls = [];
 // 全局变量
 let referenceImageUrl = null; // 用于存储参考图的URL
 let currentMode = 'default'; // 'default' 或 'image'
+let currentImageFunction = null; // 当前选择的图片功能
+let currentImageRatio = null; // 当前选择的图片比例
 
 // 更新控件状态函数
 function updateControlsState() {
@@ -282,7 +286,7 @@ menuItems.forEach(item => {
             // 隐藏默认按钮组，显示图片创作按钮组
             defaultActionButtons.style.display = 'none';
             imageActionButtons.style.display = 'flex';
-            addMessage("您已切换到图片创作模式。请描述您想要生成的图片内容，例如：'生成一份薯条'", 'ai');
+            addMessage("您已切换到图片创作模式。请按需选择功能后，描述您想要生成的图片内容，例如：'一份薯条'", 'ai');
         } else if(menuText === '代码助手') {
             // 显示默认按钮组，隐藏图片创作按钮组
             defaultActionButtons.style.display = 'flex';
@@ -497,44 +501,157 @@ async function sendMessage() {
     if (isStreaming) return;
 
     const message = messageInput.value.trim();
-    if (!message && fileUrls.length === 0) return;
 
-    // 如果没有选择历史记录码，创建一个新的
-    if (!currentHistoryCode) {
-        currentHistoryCode = `历史记录${historyCodesList.length + 1}`;
-    }
+    if (isStreaming) return;
 
-    // 添加用户消息（包含文件预览）
-    addMessageWithFiles(message, fileUrls);
+    // 获取当前模式
+    const activeMenuItem = document.querySelector('.menu-item.active span').textContent;
+    currentMode = activeMenuItem === '图片创作' ? 'image' : 'default';
 
-    // 清空文件预览区域和文件列表
-    filePreview.innerHTML = '';
-    const filesToSend = [...fileUrls];
-    fileUrls = [];
+    // 图片创作模式处理
+    if (currentMode === 'image') {
+        const message = messageInput.value.trim();
 
-    // 显示正在输入指示器
-    typingIndicator.style.display = 'block';
-    sendButton.disabled = true;
+        // 功能选择验证
+        if (!functionButton.classList.contains('active')) {
+            showNotification('请先选择功能', 'error');
+            return;
+        }
 
-    // 清空输入框
-    messageInput.value = '';
+        // 获取功能类型
+        currentImageFunction = getCommandTypeByFunction();
 
-    try {
-        isStreaming = true;
-        // 调用后端聊天接口 - 流式处理（包含文件列表）
-        await streamChatResponse(message, isSearchEnabled, filesToSend);
-    } catch (error) {
-        // 错误处理
-        addMessage(`<span style="color: red;">请求失败: ${error.message}</span>`, 'ai');
-    } finally {
-        // 隐藏正在输入指示器
-        typingIndicator.style.display = 'none';
-        sendButton.disabled = false;
-        isStreaming = false;
-        currentAIResponse = null;
+        // 获取比例大小
+        if (ratioButton.classList.contains('active')) {
+            currentImageRatio = getSizeTypeByRatio();
+        } else {
+            currentImageRatio = 1; // 默认1:1
+        }
 
-        // 更新控件状态
-        updateControlsState();
+        // 显示正在输入指示器
+        typingIndicator.style.display = 'block';
+        sendButton.disabled = true;
+
+        // 构建请求数据
+        const requestData = {
+            userId: userId,
+            history_code: currentHistoryCode || `历史记录${historyCodesList.length + 1}`,
+            content: message,
+            refer: fileUrls.length > 0 ? fileUrls[0] : null, // 参考图URL
+            command_type: currentImageFunction,
+            size_type: currentImageRatio
+        };
+
+        try {
+            // 发送请求
+            const token = localStorage.getItem('token') || "";
+            const tokenName = localStorage.getItem('tokenName') || "";
+
+            const response = await fetch('http://localhost:8097/create/image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [tokenName]: token
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            const result = await response.json();
+
+            if (result.code === '0' && result.data && result.data.url) {
+                // 创建AI消息展示生成的图片
+                const imageUrl = result.data.url;
+
+                // 创建AI消息元素
+                const messageData = createAIMessageElement();
+                const contentElement = messageData.contentElement;
+
+                // 创建图片容器
+                const imageContainer = document.createElement('div');
+                imageContainer.className = 'generated-image-container';
+                imageContainer.style.textAlign = 'center';
+                imageContainer.style.marginTop = '15px';
+
+                // 创建图片元素
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = '生成的图片';
+                img.className = 'generated-image';
+                img.style.maxWidth = '100%';
+                img.style.borderRadius = '10px';
+                img.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.1)';
+                img.style.cursor = 'pointer';
+
+                // 添加图片点击事件
+                img.addEventListener('click', () => {
+                    previewImage.src = imageUrl;
+                    imagePreviewModal.style.display = 'block';
+                });
+
+                // 添加到容器
+                imageContainer.appendChild(img);
+                contentElement.appendChild(imageContainer);
+
+                // 将整个消息元素添加到聊天容器
+                chatContainer.appendChild(messageData.messageElement);
+
+                // 平滑滚动到底部
+                smoothScrollToBottom();
+            } else {
+                addMessage(`<span style="color: red;">图片创作失败: ${result.info || '未知错误'}</span>`, 'ai');
+            }
+        } catch (error) {
+            addMessage(`<span style="color: red;">图片创作失败: ${error.message}</span>`, 'ai');
+        } finally {
+            typingIndicator.style.display = 'none';
+            sendButton.disabled = false;
+            isStreaming = false;
+
+            // 清空文件预览
+            filePreview.innerHTML = '';
+            fileUrls = [];
+            updateControlsState();
+        }
+        return;
+    } else {
+        // 默认聊天模式
+        if (!message && fileUrls.length === 0) return;
+
+        if (!currentHistoryCode) {
+            currentHistoryCode = `历史记录${historyCodesList.length + 1}`;
+        }
+
+        // 添加用户消息（包含文件预览）
+        addMessageWithFiles(message, fileUrls);
+
+        // 清空文件预览区域和文件列表
+        filePreview.innerHTML = '';
+        const filesToSend = [...fileUrls];
+        fileUrls = [];
+
+        // 显示正在输入指示器
+        typingIndicator.style.display = 'block';
+        sendButton.disabled = true;
+
+        // 清空输入框
+        messageInput.value = '';
+
+        try {
+            isStreaming = true;
+            // 调用后端聊天接口 - 流式处理（包含文件列表）
+            await streamChatResponse(message, isSearchEnabled, filesToSend);
+        } catch (error) {
+            addMessage(`<span style="color: red;">请求失败: ${error.message}</span>`, 'ai');
+        } finally {
+            // 隐藏正在输入指示器
+            typingIndicator.style.display = 'none';
+            sendButton.disabled = false;
+            isStreaming = false;
+            currentAIResponse = null;
+
+            // 更新控件状态
+            updateControlsState();
+        }
     }
 }
 
@@ -1009,7 +1126,6 @@ async function loadHistory(selectedHistoryCode) {
             // 添加历史消息
             messagesToShow.forEach(message => {
                 if (message.role === 'user') {
-                    // 处理用户消息（可能包含文本和图片）
                     let textContent = '';
                     let imageUrls = [];
 
@@ -1023,10 +1139,14 @@ async function loadHistory(selectedHistoryCode) {
 
                     addMessageWithFiles(textContent, imageUrls);
                 } else if (message.role === 'system') {
-                    // 处理AI回复
+                    // 处理系统消息（包含文本和图片）
                     message.content.forEach(item => {
                         if (item.text) {
+                            // 文本消息
                             addMessage(item.text, 'ai');
+                        } else if (item.image) {
+                            // 图片消息 - 调用新增的显示图片函数
+                            addAIImageMessage(item.image);
                         }
                     });
                 }
@@ -1157,42 +1277,6 @@ document.getElementById('referencePreview').addEventListener('click', () => {
     }
 });
 
-// 发送消息函数（支持文件上传）
-async function sendMessage() {
-    if (isStreaming) return;
-
-    const message = messageInput.value.trim();
-
-    if (currentMode === 'image') {
-        // 图片创作模式发送逻辑
-        if (!message && !referenceImageUrl) return;
-
-        // 如果没有选择功能
-        if (!functionButton.classList.contains('active')) {
-            showNotification('请先选择功能', 'error');
-            return;
-        }
-
-        // 构建图片创作请求
-        const requestData = {
-            userId: userId,
-            historyCode: currentHistoryCode || `历史记录${historyCodesList.length + 1}`,
-            commandType: getCommandTypeByFunction(), // 根据功能选择返回对应的命令类型
-            content: message,
-            sizeType: getSizeTypeByRatio(), // 根据比例大小返回对应的尺寸类型
-            refer: referenceImageUrl // 参考图URL
-        };
-
-        // 发送请求...
-        // 这里需要根据实际接口实现
-
-        showNotification('图片创作请求已发送', 'success');
-    } else {
-        // 默认模式
-        // ... 原有代码保持不变 ...
-    }
-}
-
 // 根据功能选择获取命令类型
 function getCommandTypeByFunction() {
     const functionText = functionButton.querySelector('span').textContent;
@@ -1219,4 +1303,36 @@ function getSizeTypeByRatio() {
         '16:9': 4
     };
     return ratioMap[ratioText] || 1; // 默认1:1
+}
+
+function addAIImageMessage(imageUrl) {
+    // 创建AI消息元素
+    const messageData = createAIMessageElement();
+    const contentElement = messageData.contentElement;
+
+    // 创建图片容器
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'generated-image-container';
+
+    // 创建图片元素
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.alt = '生成的图片';
+    img.className = 'generated-image';
+
+    // 添加图片点击事件
+    img.addEventListener('click', () => {
+        document.getElementById('previewImage').src = imageUrl;
+        document.getElementById('imagePreviewModal').style.display = 'block';
+    });
+
+    // 添加到容器
+    imageContainer.appendChild(img);
+    contentElement.appendChild(imageContainer);
+
+    // 将整个消息元素添加到聊天容器
+    chatContainer.appendChild(messageData.messageElement);
+
+    // 平滑滚动到底部
+    smoothScrollToBottom();
 }
