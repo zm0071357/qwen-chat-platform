@@ -1198,3 +1198,27 @@ body {
     background: rgba(255, 0, 0, 0.8);
     color: white;
 }
+
+/* chat.css */
+/* 在文件末尾添加以下样式 */
+.generated-video-container {
+    margin: 20px 0;
+    padding: 15px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    text-align: center;
+}
+
+.generated-video {
+    max-width: 100%;
+    max-height: 500px;
+    border-radius: 8px;
+    object-fit: contain;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.generated-video:hover {
+    transform: scale(1.02);
+}

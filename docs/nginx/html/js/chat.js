@@ -550,6 +550,13 @@ async function sendMessage() {
             currentImageRatio = 1; // 默认1:1
         }
 
+        // 添加用户消息到聊天框（新增代码）
+        if (message || fileUrls.length > 0) {
+            addMessageWithFiles(message, fileUrls);
+        }
+        // 清空输入框（新增代码）
+        messageInput.value = '';
+
         // 显示正在输入指示器
         typingIndicator.style.display = 'block';
         sendButton.disabled = true;
@@ -641,12 +648,15 @@ async function sendMessage() {
     if (currentMode === 'video') {
         const message = messageInput.value.trim();
 
-        // // 验证是否上传了首帧和尾帧
-        // if (!firstFrameUrl || !lastFrameUrl) {
-        //     showNotification('请上传首帧和尾帧图片', 'error');
-        //     return;
-        // }
-
+        // 添加用户消息到聊天框（新增代码）
+        if (message || firstFrameUrl || lastFrameUrl) {
+            const videoFrameUrls = [];
+            if (firstFrameUrl) videoFrameUrls.push(firstFrameUrl);
+            if (lastFrameUrl) videoFrameUrls.push(lastFrameUrl);
+            addMessageWithFiles(message, videoFrameUrls);
+        }
+        // 清空输入框（新增代码）
+        messageInput.value = '';
         // 显示正在输入指示器
         typingIndicator.style.display = 'block';
         sendButton.disabled = true;
@@ -693,13 +703,21 @@ async function sendMessage() {
                 // 创建视频元素
                 const video = document.createElement('video');
                 video.src = videoUrl;
-                video.controls = true;
+                video.controls = true; // 添加控制条（播放/暂停等）
                 video.className = 'generated-video';
                 video.style.maxWidth = '100%';
                 video.style.borderRadius = '10px';
                 video.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.1)';
 
+                // 添加视频标题
+                const videoTitle = document.createElement('div');
+                videoTitle.className = 'image-result-message';
+                videoTitle.style.marginBottom = '10px';
+                videoTitle.style.fontWeight = 'bold';
+                videoTitle.style.color = '#4b6cb7';
+
                 // 添加到容器
+                videoContainer.appendChild(videoTitle);
                 videoContainer.appendChild(video);
                 contentElement.appendChild(videoContainer);
 
