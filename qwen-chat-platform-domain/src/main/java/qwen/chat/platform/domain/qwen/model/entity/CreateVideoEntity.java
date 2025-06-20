@@ -1,6 +1,5 @@
 package qwen.chat.platform.domain.qwen.model.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,5 +18,6 @@ public class CreateVideoEntity {
     private String content;
     private String firstFrameUrl;
     private String lastFrameUrl;
-    private List<ChatRequest.Input.Message> history;
+    private List<ChatRequest.Input.Message> historyMessage;
+    private List<ChatRequest.Input.Message> requestMessage;
 }

@@ -10,6 +10,8 @@ public interface QwenDao {
 
     History getHistory(String userId, String historyCode);
 
+    History getRequestHistory(String userId, String historyCode);
+
     int insert(History history);
 
     void update(History history);

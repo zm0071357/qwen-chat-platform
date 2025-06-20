@@ -48,11 +48,8 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
     @Override
     public ResponseEntity createImage(CreateImageEntity createImageEntity) {
         // 构造参数
-        String userId = createImageEntity.getUserId();
-        String historyCode = createImageEntity.getHistoryCode();
         String content = createImageEntity.getContent();
         Integer sizeType = createImageEntity.getSizeType();
-        List<ChatRequest.Input.Message> history = createImageEntity.getHistory();
         ImageRequest imageRequest = ImageRequest.builder()
                 .model(ImageEnum.WANX_21_T2I_TURBO.getModel())
                 .input(ImageRequest.Input.builder().prompt(content).build())
@@ -62,17 +59,14 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
                         .n(1)
                         .build())
                 .build();
-        return this.imageHandle(imageRequest, history, userId, historyCode);
+        return this.imageHandle(imageRequest, createImageEntity);
     }
 
     @Override
     public ResponseEntity descriptionEdit(CreateImageEntity createImageEntity) {
         // 构造参数
-        String userId = createImageEntity.getUserId();
-        String historyCode = createImageEntity.getHistoryCode();
         String content = createImageEntity.getContent();
         String refer = createImageEntity.getRefer();
-        List<ChatRequest.Input.Message> history = createImageEntity.getHistory();
         ImageRequest imageRequest = ImageRequest.builder()
                 .model(ImageEnum.WANX_21_T2I_TURBO.getModel())
                 .input(ImageRequest.InputExtend.builder()
@@ -81,21 +75,18 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
                         .base_image_url(refer)
                         .build())
                 .parameters(ImageRequest.ParametersExtend.builder()
-                        .strength(0.3F)
+                        .strength(0.7F)
                         .n(1)
                         .build())
                 .build();
-        return this.imageHandle(imageRequest, history, userId, historyCode);
+        return this.imageHandle(imageRequest, createImageEntity);
     }
 
     @Override
     public ResponseEntity removeWatermark(CreateImageEntity createImageEntity) {
         // 构造参数
-        String userId = createImageEntity.getUserId();
-        String historyCode = createImageEntity.getHistoryCode();
         String content = createImageEntity.getContent();
         String refer = createImageEntity.getRefer();
-        List<ChatRequest.Input.Message> history = createImageEntity.getHistory();
         ImageRequest imageRequest = ImageRequest.builder()
                 .model(ImageEnum.WANX_21_T2I_TURBO.getModel())
                 .input(ImageRequest.InputExtend.builder()
@@ -107,17 +98,14 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
                         .n(1)
                         .build())
                 .build();
-        return this.imageHandle(imageRequest, history, userId, historyCode);
+        return this.imageHandle(imageRequest, createImageEntity);
     }
 
     @Override
     public ResponseEntity expand(CreateImageEntity createImageEntity) {
         // 构造参数
-        String userId = createImageEntity.getUserId();
-        String historyCode = createImageEntity.getHistoryCode();
         String content = createImageEntity.getContent();
         String refer = createImageEntity.getRefer();
-        List<ChatRequest.Input.Message> history = createImageEntity.getHistory();
         ImageRequest imageRequest = ImageRequest.builder()
                 .model(ImageEnum.WANX_21_T2I_TURBO.getModel())
                 .input(ImageRequest.InputExtend.builder()
@@ -133,17 +121,14 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
                         .n(1)
                         .build())
                 .build();
-        return this.imageHandle(imageRequest, history, userId, historyCode);
+        return this.imageHandle(imageRequest, createImageEntity);
     }
 
     @Override
     public ResponseEntity superResolution(CreateImageEntity createImageEntity) {
         // 构造参数
-        String userId = createImageEntity.getUserId();
-        String historyCode = createImageEntity.getHistoryCode();
         String content = createImageEntity.getContent();
         String refer = createImageEntity.getRefer();
-        List<ChatRequest.Input.Message> history = createImageEntity.getHistory();
         ImageRequest imageRequest = ImageRequest.builder()
                 .model(ImageEnum.WANX_21_T2I_TURBO.getModel())
                 .input(ImageRequest.InputExtend.builder()
@@ -155,17 +140,14 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
                         .n(1)
                         .build())
                 .build();
-        return this.imageHandle(imageRequest, history, userId, historyCode);
+        return this.imageHandle(imageRequest, createImageEntity);
     }
 
     @Override
     public ResponseEntity colorization(CreateImageEntity createImageEntity) {
         // 构造参数
-        String userId = createImageEntity.getUserId();
-        String historyCode = createImageEntity.getHistoryCode();
         String content = createImageEntity.getContent();
         String refer = createImageEntity.getRefer();
-        List<ChatRequest.Input.Message> history = createImageEntity.getHistory();
         ImageRequest imageRequest = ImageRequest.builder()
                 .model(ImageEnum.WANX_21_T2I_TURBO.getModel())
                 .input(ImageRequest.InputExtend.builder()
@@ -177,7 +159,7 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
                         .n(1)
                         .build())
                 .build();
-        return this.imageHandle(imageRequest, history, userId, historyCode);
+        return this.imageHandle(imageRequest, createImageEntity);
     }
 
     @Override
@@ -196,18 +178,20 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
                         .promptExtend(true)
                         .build())
                 .build();
-        return this.videoHandle(videoRequest);
+        return this.videoHandle(videoRequest, createVideoEntity);
     }
 
     /**
      * 通用图片处理
      * @param imageRequest
-     * @param history
-     * @param userId
-     * @param historyCode
+     * @param createImageEntity
      * @return
      */
-    private ResponseEntity imageHandle(ImageRequest imageRequest, List<ChatRequest.Input.Message> history, String userId, String historyCode) {
+    private ResponseEntity imageHandle(ImageRequest imageRequest, CreateImageEntity createImageEntity) {
+        String userId = createImageEntity.getUserId();
+        String historyCode = createImageEntity.getHistoryCode();
+        List<ChatRequest.Input.Message> historyMessage = createImageEntity.getHistoryMessage();
+        List<ChatRequest.Input.Message> requestMessage = createImageEntity.getRequestMessage();
         try {
             ImageResponse response = imageServiceImpl.imageSynthesis(imageRequest);
             String taskId = response.getOutput().getTask_id();
@@ -224,7 +208,18 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
                 if (ImageTaskStatusEnum.SUCCEEDED.getCode().equals(curStatus)) {
                     break;
                 } else if (ImageTaskStatusEnum.FAILED.getCode().equals(curStatus) || ImageTaskStatusEnum.UNKNOWN.getCode().equals(curStatus)) {
-                    history.remove(history.size() - 1);
+                    historyMessage.remove(historyMessage.size() - 1);
+                    requestMessage.remove(requestMessage.size() - 1);
+                    return ResponseEntity.builder()
+                            .isSuccess(false)
+                            .message(MessageConstant.IMAGE_FAILED_MESSAGE)
+                            .build();
+                }
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    historyMessage.remove(historyMessage.size() - 1);
+                    requestMessage.remove(requestMessage.size() - 1);
                     return ResponseEntity.builder()
                             .isSuccess(false)
                             .message(MessageConstant.IMAGE_FAILED_MESSAGE)
@@ -234,27 +229,33 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
             String url = result.getOutput().getResults().get(0).getUrl();
             log.info("url:{}", url);
             // 添加历史记录
-            List<ChatRequest.Input.Message.Content> systemContent = new ArrayList<>();
-            systemContent.add(ChatRequest.Input.Message.Content.builder()
+            List<ChatRequest.Input.Message.Content> content = new ArrayList<>();
+            content.add(ChatRequest.Input.Message.Content.builder()
                     .image(url)
                     .build());
-            history.add(ChatRequest.Input.Message.builder()
+            historyMessage.add(ChatRequest.Input.Message.builder()
                     .role(RoleConstant.SYSTEM)
-                    .content(systemContent)
+                    .content(content)
                     .build());
-            log.info("history:{}", JSON.toJSONString(history));
+            requestMessage.add(ChatRequest.Input.Message.builder()
+                    .role(RoleConstant.USER)
+                    .content(content)
+                    .build());
             // 更新历史记录
             qwenDao.update(History.builder()
                     .userId(userId)
                     .historyCode(historyCode)
-                    .historyJson(JSON.toJSONString(history))
+                    .historyJson(JSON.toJSONString(historyMessage))
+                    .requestJson(JSON.toJSONString(requestMessage))
                     .build());
+            log.info("更新历史记录完成");
             return ResponseEntity.builder()
                     .isSuccess(true)
                     .result(url)
                     .build();
         } catch (IOException e) {
-            history.remove(history.size() - 1);
+            historyMessage.remove(historyMessage.size() - 1);
+            requestMessage.remove(requestMessage.size() - 1);
             return ResponseEntity.builder()
                     .isSuccess(false)
                     .message(MessageConstant.IMAGE_FAILED_MESSAGE)
@@ -265,9 +266,14 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
     /**
      * 通用视频处理
      * @param videoRequest
+     * @param createVideoEntity
      * @return
      */
-    private ResponseEntity videoHandle(VideoRequest videoRequest) {
+    private ResponseEntity videoHandle(VideoRequest videoRequest, CreateVideoEntity createVideoEntity) {
+        String userId = createVideoEntity.getUserId();
+        String historyCode = createVideoEntity.getHistoryCode();
+        List<ChatRequest.Input.Message> historyMessage = createVideoEntity.getHistoryMessage();
+        List<ChatRequest.Input.Message> requestMessage = createVideoEntity.getRequestMessage();
         try {
             VideoResponse response = videoServiceImpl.videoSynthesis(videoRequest);
             String taskId = response.getOutput().getTask_id();
@@ -284,6 +290,8 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
                 if (VideoTaskStatusEnum.SUCCEEDED.getCode().equals(curStatus)) {
                     break;
                 } else if (VideoTaskStatusEnum.FAILED.getCode().equals(curStatus) || VideoTaskStatusEnum.UNKNOWN.getCode().equals(curStatus)) {
+                    historyMessage.remove(historyMessage.size() - 1);
+                    requestMessage.remove(requestMessage.size() - 1);
                     return ResponseEntity.builder()
                             .isSuccess(false)
                             .message(MessageConstant.VIDEO_FAILED_MESSAGE)
@@ -292,6 +300,8 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
                 try {
                     Thread.sleep(3000);
                 } catch (InterruptedException e) {
+                    historyMessage.remove(historyMessage.size() - 1);
+                    requestMessage.remove(requestMessage.size() - 1);
                     return ResponseEntity.builder()
                             .isSuccess(false)
                             .message(MessageConstant.VIDEO_FAILED_MESSAGE)
@@ -300,12 +310,34 @@ public class QwenCreateRepositoryImpl implements QwenCreateRepository {
             }
             String url = result.getOutput().getVideo_url();
             log.info("url:{}", url);
+            // 添加历史记录
+            List<ChatRequest.Input.Message.Content> content = new ArrayList<>();
+            content.add(ChatRequest.Input.Message.Content.builder()
+                    .video(url)
+                    .build());
+            historyMessage.add(ChatRequest.Input.Message.builder()
+                    .role(RoleConstant.SYSTEM)
+                    .content(content)
+                    .build());
+            requestMessage.remove(requestMessage.size() - 1);
+            // 更新历史记录
+            qwenDao.update(History.builder()
+                    .userId(userId)
+                    .historyCode(historyCode)
+                    .historyJson(JSON.toJSONString(historyMessage))
+                    .requestJson(JSON.toJSONString(requestMessage))
+                    .build());
+            log.info("更新历史记录完成");
             return ResponseEntity.builder()
                     .isSuccess(true)
                     .result(url)
                     .build();
+
+
         } catch (IOException e) {
             log.info("生成视频出错:{}", e.getMessage());
+            historyMessage.remove(historyMessage.size() - 1);
+            requestMessage.remove(requestMessage.size() - 1);
             return ResponseEntity.builder()
                     .isSuccess(false)
                     .message(MessageConstant.VIDEO_FAILED_MESSAGE)

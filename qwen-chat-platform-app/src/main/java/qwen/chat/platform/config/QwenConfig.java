@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
 import qwen.chat.platform.domain.qwen.adapter.port.OnlineLinkPort;
 import qwen.chat.platform.infrastructure.adapter.repository.QwenCreateRepositoryImpl;
 import qwen.chat.platform.infrastructure.adapter.repository.QwenRepositoryImpl;
@@ -66,7 +67,8 @@ public class QwenConfig {
                 .addConverterFactory(JacksonConverterFactory.create())
                 .build()
                 .create(OnlineLinkPort.class);
-        return new QwenRepositoryImpl(onlineLinkPort, chatServiceImpl);
+        ResponseBodyEmitter emitter = new ResponseBodyEmitter(10 * 60 * 1000L);
+        return new QwenRepositoryImpl(onlineLinkPort, emitter, chatServiceImpl);
     }
 
     @Bean(name = "qwenCreateRepositoryImpl")

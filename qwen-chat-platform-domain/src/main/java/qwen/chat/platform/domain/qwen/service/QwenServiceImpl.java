@@ -6,6 +6,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter
 import qwen.chat.platform.domain.qwen.DefaultQwenService;
 import qwen.chat.platform.domain.qwen.adapter.repository.QwenRepository;
 import qwen.chat.platform.domain.qwen.model.entity.MessageEntity;
+import qwen.chat.platform.domain.qwen.model.entity.PreRequestEntity;
 import qwen.sdk.largemodel.chat.model.ChatRequest;
 
 import javax.annotation.Resource;
@@ -20,32 +21,47 @@ public class QwenServiceImpl extends DefaultQwenService {
 
     @Override
     protected ResponseBodyEmitter handleFileMessage(MessageEntity messageEntity) {
-        String historyCode = messageEntity.getHistoryCode();
         String userId = messageEntity.getUserId();
+        String historyCode = messageEntity.getHistoryCode();
         // 历史记录
-        List<ChatRequest.Input.Message> messages = qwenRepository.getHistory(userId, historyCode);
-        return qwenRepository.chatWithFile(messages, messageEntity);
+        List<ChatRequest.Input.Message> historyMessages = this.getHistory(userId, historyCode, true);
+        // 请求记录
+        List<ChatRequest.Input.Message> requestHistoryMessages = this.getHistory(userId, historyCode, false);
+        PreRequestEntity preRequestEntity = PreRequestEntity.builder()
+                .userId(userId)
+                .historyCode(historyCode)
+                .content(messageEntity.getContent())
+                .think(messageEntity.isThink())
+                .search(messageEntity.isSearch())
+                .fileList(messageEntity.getFileList())
+                .build();
+        return qwenRepository.chatWithFile(historyMessages, requestHistoryMessages, preRequestEntity);
     }
 
     @Override
     protected ResponseBodyEmitter handleTextMessage(MessageEntity messageEntity) {
-        String content = messageEntity.getContent();
-        String historyCode = messageEntity.getHistoryCode();
         String userId = messageEntity.getUserId();
-        boolean search = messageEntity.isSearch();
-        // 获取历史记录
-        List<ChatRequest.Input.Message> messages = qwenRepository.getHistory(userId, historyCode);
-        // 视频链接
-        if (messageEntity.isLink(content)) {
-            return qwenRepository.chatWithLink(messages, content, search, historyCode, userId);
+        String historyCode = messageEntity.getHistoryCode();
+        // 历史记录
+        List<ChatRequest.Input.Message> historyMessages = this.getHistory(userId, historyCode, true);
+        // 请求记录
+        List<ChatRequest.Input.Message> requestHistoryMessages = this.getHistory(userId, historyCode, false);
+        PreRequestEntity preRequestEntity = PreRequestEntity.builder()
+                .userId(userId)
+                .historyCode(historyCode)
+                .content(messageEntity.getContent())
+                .think(messageEntity.isThink())
+                .search(messageEntity.isSearch())
+                .build();
+        if (!preRequestEntity.isLink(preRequestEntity.getContent())) {
+            return qwenRepository.chat(historyMessages, requestHistoryMessages, preRequestEntity);
         }
-        // 普通文本
-        return qwenRepository.chat(messages, content, search, historyCode, userId);
+        return qwenRepository.chatWithLink(historyMessages, requestHistoryMessages, preRequestEntity);
     }
 
     @Override
-    public List<ChatRequest.Input.Message> getHistory(String userId, String historyCode) {
-        return qwenRepository.getHistory(userId, historyCode);
+    public List<ChatRequest.Input.Message> getHistory(String userId, String historyCode, boolean isHistory) {
+        return qwenRepository.getHistory(userId, historyCode, isHistory);
     }
 
     @Override

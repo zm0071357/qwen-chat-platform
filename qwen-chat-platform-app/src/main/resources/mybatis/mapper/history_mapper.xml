@@ -7,12 +7,19 @@
         <result column="user_id" property="userId"/>
         <result column="history_code" property="historyCode"/>
         <result column="history_json" property="historyJson"/>
+        <result column="request_json" property="requestJson"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
     </resultMap>
 
     <select id="getHistory" resultMap="dataMap">
         select history_json
+        from history
+        where user_id = #{userId} and history_code = #{historyCode}
+    </select>
+
+    <select id="getRequestHistory" resultMap="dataMap">
+        select request_json
         from history
         where user_id = #{userId} and history_code = #{historyCode}
     </select>
@@ -25,14 +32,15 @@
     </select>
 
     <insert id="insert" parameterType="qwen.chat.platform.infrastructure.dao.po.History">
-        insert into history (user_id, history_code, history_json, create_time, update_time) values
-        (#{userId}, #{historyCode}, #{historyJson}, now(), now())
+        insert into history (user_id, history_code, history_json, request_json, create_time, update_time) values
+        (#{userId}, #{historyCode}, #{historyJson}, #{requestJson}, now(), now())
     </insert>
 
     <update id="update" parameterType="qwen.chat.platform.infrastructure.dao.po.History">
         update history
         set
             history_json = #{historyJson},
+            request_json = #{requestJson},
             update_time = now()
         where
             user_id = #{userId}

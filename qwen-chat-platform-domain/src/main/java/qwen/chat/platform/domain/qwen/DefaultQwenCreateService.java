@@ -8,6 +8,7 @@ import qwen.chat.platform.domain.qwen.model.entity.CreateVideoEntity;
 import qwen.chat.platform.domain.qwen.model.entity.ResponseEntity;
 import qwen.chat.platform.domain.qwen.model.valobj.CommandTypeEnum;
 import qwen.chat.platform.domain.qwen.model.valobj.RoleConstant;
+import qwen.chat.platform.domain.qwen.model.valobj.SizeTypeEnum;
 import qwen.sdk.largemodel.chat.model.ChatRequest;
 
 import javax.annotation.PostConstruct;
@@ -45,53 +46,67 @@ public abstract class DefaultQwenCreateService implements QwenCreateService {
         String content = createImageEntity.getContent();
         String refer = createImageEntity.getRefer();
         Integer commandType = createImageEntity.getCommandType();
+        Integer sizeType = createImageEntity.getSizeType();
         // 获取历史记录
-        List<ChatRequest.Input.Message> history = qwenRepository.getHistory(userId, historyCode);
+        List<ChatRequest.Input.Message> historyMessage = qwenRepository.getHistory(userId, historyCode, true);
+        // 获取请求记录
+        List<ChatRequest.Input.Message> requestMessage = qwenRepository.getHistory(userId, historyCode, false);
         // 添加历史记录
         List<ChatRequest.Input.Message.Content> userContent = new ArrayList<>();
         userContent.add(ChatRequest.Input.Message.Content.builder()
-                .text(CommandTypeEnum.getCommand(commandType) + ":" + content)
+                .text(CommandTypeEnum.getCommand(commandType) + ":" + content + "比例:" + SizeTypeEnum.getInfo(sizeType))
                 .build());
         if (refer != null) {
             userContent.add(ChatRequest.Input.Message.Content.builder()
                     .image(refer)
                     .build());
         }
-        history.add(ChatRequest.Input.Message.builder()
+        historyMessage.add(ChatRequest.Input.Message.builder()
                 .role(RoleConstant.USER)
                 .content(userContent)
                 .build());
-        createImageEntity.setHistory(history);
+        requestMessage.add(ChatRequest.Input.Message.builder()
+                .role(RoleConstant.USER)
+                .content(userContent)
+                .build());
+        createImageEntity.setHistoryMessage(historyMessage);
+        createImageEntity.setRequestMessage(requestMessage);
         return imageHandlerMap.get(commandType).apply(createImageEntity);
     }
 
     @Override
     public ResponseEntity handleVideo(CreateVideoEntity createVideoEntity) {
-//        String userId = createVideoEntity.getUserId();
-//        String historyCode = createVideoEntity.getHistoryCode();
-//        String content = createVideoEntity.getContent();
-//        String firstFrameUrl = createVideoEntity.getFirstFrameUrl();
-//        String lastFrameUrl = createVideoEntity.getLastFrameUrl();
-//        List<ChatRequest.Input.Message> history = qwenRepository.getHistory(userId, historyCode);
-//        List<ChatRequest.Input.Message.Content> userContent = new ArrayList<>();
-//        userContent.add(ChatRequest.Input.Message.Content.builder()
-//                .text(content)
-//                .build());
-//        if (firstFrameUrl != null) {
-//            userContent.add(ChatRequest.Input.Message.Content.builder()
-//                    .image(firstFrameUrl)
-//                    .build());
-//        }
-//        if (lastFrameUrl != null) {
-//            userContent.add(ChatRequest.Input.Message.Content.builder()
-//                    .image(lastFrameUrl)
-//                    .build());
-//        }
-//        history.add(ChatRequest.Input.Message.builder()
-//                .role(RoleConstant.USER)
-//                .content(userContent)
-//                .build());
-//        createVideoEntity.setHistory(history);
+        String userId = createVideoEntity.getUserId();
+        String historyCode = createVideoEntity.getHistoryCode();
+        String content = createVideoEntity.getContent();
+        String firstFrameUrl = createVideoEntity.getFirstFrameUrl();
+        String lastFrameUrl = createVideoEntity.getLastFrameUrl();
+        List<ChatRequest.Input.Message> historyMessage = qwenRepository.getHistory(userId, historyCode, true);
+        List<ChatRequest.Input.Message> requestMessage = qwenRepository.getHistory(userId, historyCode, true);
+        List<ChatRequest.Input.Message.Content> userContent = new ArrayList<>();
+        userContent.add(ChatRequest.Input.Message.Content.builder()
+                .text("生成视频：" + content)
+                .build());
+        if (firstFrameUrl != null) {
+            userContent.add(ChatRequest.Input.Message.Content.builder()
+                    .image(firstFrameUrl)
+                    .build());
+        }
+        if (lastFrameUrl != null) {
+            userContent.add(ChatRequest.Input.Message.Content.builder()
+                    .image(lastFrameUrl)
+                    .build());
+        }
+        historyMessage.add(ChatRequest.Input.Message.builder()
+                .role(RoleConstant.USER)
+                .content(userContent)
+                .build());
+        requestMessage.add(ChatRequest.Input.Message.builder()
+                .role(RoleConstant.USER)
+                .content(userContent)
+                .build());
+        createVideoEntity.setHistoryMessage(historyMessage);
+        createVideoEntity.setRequestMessage(requestMessage);
         return this.createVideo(createVideoEntity);
     }
 

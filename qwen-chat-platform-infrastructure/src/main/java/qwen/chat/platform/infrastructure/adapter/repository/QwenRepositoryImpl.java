@@ -9,7 +9,7 @@ import qwen.chat.platform.domain.qwen.adapter.port.OnlineLinkPort;
 import qwen.chat.platform.domain.qwen.adapter.repository.QwenRepository;
 import qwen.chat.platform.domain.qwen.model.entity.MessageContentEntity;
 import qwen.chat.platform.domain.qwen.model.entity.AnalysisVideoEntity;
-import qwen.chat.platform.domain.qwen.model.entity.MessageEntity;
+import qwen.chat.platform.domain.qwen.model.entity.PreRequestEntity;
 import qwen.chat.platform.domain.qwen.model.valobj.FileTypeEnum;
 import qwen.chat.platform.domain.qwen.model.valobj.MessageConstant;
 import qwen.chat.platform.domain.qwen.model.valobj.RoleConstant;
@@ -37,20 +37,19 @@ public class QwenRepositoryImpl implements QwenRepository {
 
     private final OnlineLinkPort onlineLinkPort;
     private final ChatServiceImpl chatServiceImpl;
+    private final ResponseBodyEmitter emitter;
 
     private final Map<FileTypeEnum, Function<MessageContentEntity, List<ChatRequest.Input.Message.Content>>> fileMap = new HashMap<>();
 
-    public QwenRepositoryImpl(OnlineLinkPort onlineLinkPort, ChatServiceImpl chatServiceImpl) {
+    public QwenRepositoryImpl(OnlineLinkPort onlineLinkPort, ResponseBodyEmitter emitter, ChatServiceImpl chatServiceImpl) {
         this.onlineLinkPort = onlineLinkPort;
+        this.emitter = emitter;
         this.chatServiceImpl = chatServiceImpl;
-    }
-
-    @PostConstruct
-    private void init() {
         // 初始化
         fileMap.put(FileTypeEnum.IMAGE, entity -> Collections.singletonList(createImageMessage(entity.getFile())));
         fileMap.put(FileTypeEnum.AUDIO, entity -> Collections.singletonList(createAudioMessage(entity.getFile())));
         fileMap.put(FileTypeEnum.VIDEO, entity -> Collections.singletonList(createVideoMessage(entity.getFile())));
+        log.info("文件消息构造器初始化完成");
     }
 
     private ChatRequest.Input.Message.Content createAudioMessage(String file) {
@@ -72,8 +71,8 @@ public class QwenRepositoryImpl implements QwenRepository {
     }
 
     @Override
-    public List<ChatRequest.Input.Message> getHistory(String userId, String historyCode) {
-        History history = qwenDao.getHistory(userId, historyCode);
+    public List<ChatRequest.Input.Message> getHistory(String userId, String historyCode, boolean isHistory) {
+        History history = isHistory ? qwenDao.getHistory(userId, historyCode) : qwenDao.getRequestHistory(userId, historyCode);
         if (history == null) {
             List<ChatRequest.Input.Message> messages = new ArrayList<>();
             List<ChatRequest.Input.Message.Content> systemContent = new ArrayList<>();
@@ -85,31 +84,48 @@ public class QwenRepositoryImpl implements QwenRepository {
             qwenDao.insert(History.builder()
                     .userId(userId)
                     .historyCode(historyCode)
+                    .requestJson(JSON.toJSONString(messages))
                     .historyJson(JSON.toJSONString(messages))
                     .build());
             return messages;
         }
-        return JSON.parseArray(history.getHistoryJson(), ChatRequest.Input.Message.class);
+        return JSON.parseArray(isHistory ? history.getHistoryJson() : history.getRequestJson(), ChatRequest.Input.Message.class);
     }
 
     @Override
-    public ResponseBodyEmitter chat(List<ChatRequest.Input.Message> messages, String content, boolean search, String historyCode, String userId) {
-        // 添加历史记录
+    public ResponseBodyEmitter chat(List<ChatRequest.Input.Message> historyMessages,
+                                    List<ChatRequest.Input.Message> requestHistoryMessages,
+                                    PreRequestEntity preRequestEntity) {
+        String content = preRequestEntity.getContent();
+        String historyCode = preRequestEntity.getHistoryCode();
+        String userId = preRequestEntity.getUserId();
+        boolean search = preRequestEntity.isSearch();
+        // 添加历史记录和请求记录
         List<ChatRequest.Input.Message.Content> userContent = new ArrayList<>();
         userContent.add(ChatRequest.Input.Message.Content.builder()
                 .text(content)
                 .build());
-        messages.add(ChatRequest.Input.Message.builder()
+        historyMessages.add(ChatRequest.Input.Message.builder()
                 .role(RoleConstant.USER)
                 .content(userContent)
                 .build());
-        return this.handle(messages, search, historyCode, userId, true);
+        requestHistoryMessages.add(ChatRequest.Input.Message.builder()
+                .role(RoleConstant.USER)
+                .content(userContent)
+                .build());
+        return this.handle(historyMessages, requestHistoryMessages, userId, historyCode, search, true);
     }
 
     @Override
-    public ResponseBodyEmitter chatWithLink(List<ChatRequest.Input.Message> messages, String content, boolean search, String historyCode, String userId) {
+    public ResponseBodyEmitter chatWithLink(List<ChatRequest.Input.Message> historyMessages,
+                                            List<ChatRequest.Input.Message> requestHistoryMessages,
+                                            PreRequestEntity preRequestEntity) {
+        String content = preRequestEntity.getContent();
         String onlineLink = getOnlineLink(content);
-        // 添加历史记录
+        String historyCode = preRequestEntity.getHistoryCode();
+        String userId = preRequestEntity.getUserId();
+        boolean search = preRequestEntity.isSearch();
+        // 添加历史记录和请求记录
         List<ChatRequest.Input.Message.Content> userContent = new ArrayList<>();
         userContent.add(ChatRequest.Input.Message.Content.builder()
                 .video(onlineLink)
@@ -117,52 +133,59 @@ public class QwenRepositoryImpl implements QwenRepository {
         userContent.add(ChatRequest.Input.Message.Content.builder()
                 .text(MessageConstant.DES_VIDEO_MESSAGE)
                 .build());
-        // 构造参数
-        messages.add(ChatRequest.Input.Message.builder()
+        historyMessages.add(ChatRequest.Input.Message.builder()
                 .role(RoleConstant.USER)
                 .content(userContent)
                 .build());
-        return this.handle(messages, search, historyCode, userId, false);
+        requestHistoryMessages.add(ChatRequest.Input.Message.builder()
+                .role(RoleConstant.USER)
+                .content(userContent)
+                .build());
+        return this.handle(historyMessages, requestHistoryMessages, userId, historyCode, search, false);
     }
 
     @Override
-    public ResponseBodyEmitter chatWithFile(List<ChatRequest.Input.Message> messages, MessageEntity messageEntity) {
-        List<String> fileList = messageEntity.getFileList();
-        boolean isSaveHistory = true;
+    public ResponseBodyEmitter chatWithFile(List<ChatRequest.Input.Message> historyMessages, List<ChatRequest.Input.Message> requestHistoryMessages, PreRequestEntity preRequestEntity) {
+        List<String> fileList = preRequestEntity.getFileList();
         Set<FileTypeEnum> mediaTypes = new HashSet<>();
-        for (String file : messageEntity.getFileList()) {
-            FileTypeEnum fileType = messageEntity.fileType(file);
+        for (String file : fileList) {
+            FileTypeEnum fileType = preRequestEntity.fileType(file);
             if (fileType == FileTypeEnum.IMAGE || fileType == FileTypeEnum.AUDIO || fileType == FileTypeEnum.VIDEO) {
                 mediaTypes.add(fileType);
             }
         }
         if (mediaTypes.size() > 1) {
             log.info("文件类型超过2种");
-            return this.handleWrong();
+            try {
+                emitter.send(MessageConstant.VARIOUS_FILES_MESSAGE);
+                emitter.complete();
+                return emitter;
+            } catch (IOException e) {
+                throw new RuntimeException(e.getMessage());
+            }
         }
-        // 获取
         List<ChatRequest.Input.Message.Content> userContent = new ArrayList<>();
         for (String file : fileList) {
-            FileTypeEnum fileTypeEnum = messageEntity.fileType(file);
-            if (fileTypeEnum == FileTypeEnum.VIDEO || fileTypeEnum == FileTypeEnum.UNKNOWN) {
-                isSaveHistory = false;
-            }
-
+            FileTypeEnum fileTypeEnum = preRequestEntity.fileType(file);
             Function<MessageContentEntity, List<ChatRequest.Input.Message.Content>> handler = fileMap.get(fileTypeEnum);
             userContent.addAll(handler.apply(MessageContentEntity.builder()
                     .file(file)
-                    .content(messageEntity.getContent())
+                    .content(preRequestEntity.getContent())
                     .build()));
         }
         userContent.add(ChatRequest.Input.Message.Content.builder()
-                .text(messageEntity.getContent() != null ? messageEntity.getContent() : MessageConstant.DES_FILE_MESSAGE)
+                .text(preRequestEntity.getContent())
                 .build());
         // 构造参数
-        messages.add(ChatRequest.Input.Message.builder()
+        historyMessages.add(ChatRequest.Input.Message.builder()
                 .role(RoleConstant.USER)
                 .content(userContent)
                 .build());
-        return this.handle(messages, messageEntity.isSearch(), messageEntity.getHistoryCode(), messageEntity.getUserId(), isSaveHistory);
+        requestHistoryMessages.add(ChatRequest.Input.Message.builder()
+                .role(RoleConstant.USER)
+                .content(userContent)
+                .build());
+        return this.handle(historyMessages, requestHistoryMessages, preRequestEntity.getUserId(), preRequestEntity.getHistoryCode(), preRequestEntity.isSearch(), true);
     }
 
     @Override
@@ -188,15 +211,15 @@ public class QwenRepositoryImpl implements QwenRepository {
 
     /**
      * 通用处理
-     * @param messages
-     * @param search
-     * @param historyCode
+     * @param historyMessages
+     * @param requestHistoryMessages
      * @param userId
+     * @param historyCode
+     * @param search
      * @return
      */
-    private ResponseBodyEmitter handle(List<ChatRequest.Input.Message> messages, boolean search, String historyCode, String userId, boolean isSaveHistory) {
+    private ResponseBodyEmitter handle(List<ChatRequest.Input.Message> historyMessages, List<ChatRequest.Input.Message> requestHistoryMessages, String userId, String historyCode, boolean search, boolean isSaveRequest) {
         StringBuilder result = new StringBuilder();
-        ResponseBodyEmitter emitter = new ResponseBodyEmitter(10 * 60 * 1000L);
         AtomicBoolean streamFailed = new AtomicBoolean(false); // 标记流是否失败
         AtomicBoolean resultFailed = new AtomicBoolean(false); // 标记回复是否失败
         try {
@@ -204,7 +227,7 @@ public class QwenRepositoryImpl implements QwenRepository {
             ChatRequest request = ChatRequest.builder()
                     .model(ChatModelEnum.QWEN_VL_MAX_LATEST.getModel())
                     .input(ChatRequest.Input.builder()
-                            .messages(messages)
+                            .messages(requestHistoryMessages)
                             .build())
                     .parameters(ChatRequest.Parameters.builder()
                             .resultFormat("message")
@@ -233,7 +256,8 @@ public class QwenRepositoryImpl implements QwenRepository {
                             log.info("回答终止: {}", data);
                         } else {
                             log.warn("回答失败: {}", data);
-                            messages.remove(messages.size() - 1);
+                            requestHistoryMessages.remove(requestHistoryMessages.size() - 1);
+                            historyMessages.remove(historyMessages.size() - 1);
                             resultFailed.set(true); // 标记回答失败
                             emitter.send(MessageConstant.TEXT_FAILED_MESSAGE);
                         }
@@ -246,34 +270,37 @@ public class QwenRepositoryImpl implements QwenRepository {
 
                 @Override
                 public void onClosed(EventSource eventSource) {
-                    if (!streamFailed.get()) {
-                        try {
-                            log.info("result:{}", result);
-                            if (isSaveHistory && !resultFailed.get()) {
-                                // 将回答加入历史记录
-                                List<ChatRequest.Input.Message.Content> systemContent = new ArrayList<>();
-                                systemContent.add(ChatRequest.Input.Message.Content.builder()
-                                        .text(String.valueOf(result))
-                                        .build());
-                                messages.add(ChatRequest.Input.Message.builder()
-                                        .role(RoleConstant.SYSTEM)
-                                        .content(systemContent)
-                                        .build());
-                                // 构造参数
-                                History history = History.builder()
-                                        .userId(userId)
-                                        .historyCode(historyCode)
-                                        .historyJson(JSON.toJSONString(messages))
-                                        .build();
-                                // 保存至数据库
-                                log.info("保存至数据库");
-                                qwenDao.update(history);
-                            }
-                            emitter.complete();
-                        } catch (Exception e) {
-                            emitter.completeWithError(new RuntimeException("保存历史记录失败", e));
+                    if (!streamFailed.get() && !resultFailed.get()) {
+                        log.info("result:{}", result);
+                        // 将回答加入历史记录
+                        List<ChatRequest.Input.Message.Content> systemContent = new ArrayList<>();
+                        systemContent.add(ChatRequest.Input.Message.Content.builder()
+                                .text(String.valueOf(result))
+                                .build());
+                        historyMessages.add(ChatRequest.Input.Message.builder()
+                                .role(RoleConstant.SYSTEM)
+                                .content(systemContent)
+                                .build());
+                        if (isSaveRequest) {
+                            requestHistoryMessages.add(ChatRequest.Input.Message.builder()
+                                    .role(RoleConstant.SYSTEM)
+                                    .content(systemContent)
+                                    .build());
+                        } else {
+                            requestHistoryMessages.remove(requestHistoryMessages.size() - 1);
                         }
+                        // 构造参数
+                        History history = History.builder()
+                                .userId(userId)
+                                .historyCode(historyCode)
+                                .historyJson(JSON.toJSONString(historyMessages))
+                                .requestJson(JSON.toJSONString(requestHistoryMessages))
+                                .build();
+                        // 保存至数据库
+                        log.info("保存至数据库");
+                        qwenDao.update(history);
                     }
+                    emitter.complete();
                 }
 
                 @Override
@@ -282,7 +309,8 @@ public class QwenRepositoryImpl implements QwenRepository {
                     String errorMsg = "流式请求失败: " + (response != null ? response.message() : "未知错误");
                     log.error(errorMsg, t);
                     emitter.completeWithError(new RuntimeException(errorMsg, t));
-                    messages.remove(messages.size() - 1);
+                    requestHistoryMessages.remove(requestHistoryMessages.size() - 1);
+                    historyMessages.remove(historyMessages.size() - 1);
                 }
             });
         } catch (IOException e) {
@@ -291,18 +319,4 @@ public class QwenRepositoryImpl implements QwenRepository {
         return emitter;
     }
 
-    /**
-     * 返回错误信息
-     * @return
-     */
-    private ResponseBodyEmitter handleWrong() {
-        ResponseBodyEmitter emitter = new ResponseBodyEmitter(10 * 60 * 1000L);
-        try {
-            emitter.send(MessageConstant.VARIOUS_FILES_MESSAGE);
-            emitter.complete();
-            return emitter;
-        } catch (IOException e) {
-            throw new RuntimeException(e.getMessage());
-        }
-    }
 }

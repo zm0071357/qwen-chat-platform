@@ -176,7 +176,8 @@ public class ChatController implements ChatService {
                     .build();
         }
         if (userService.checkUserIsExist(userId)) {
-            List<ChatRequest.Input.Message> messages = qwenService.getHistory(userId, historyCode);
+            // 获取历史记录
+            List<ChatRequest.Input.Message> messages = qwenService.getHistory(userId, historyCode, true);
             return Response.<List<ChatRequest.Input.Message>>builder()
                     .code(String.valueOf(HistoryEnum.SUCCESS.getCode()))
                     .data(messages)

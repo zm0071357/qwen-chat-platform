@@ -9,7 +9,7 @@ import java.util.List;
 public interface QwenService {
     ResponseBodyEmitter handle(MessageEntity messageEntity);
 
-    List<ChatRequest.Input.Message> getHistory(String userId, String historyCode);
+    List<ChatRequest.Input.Message> getHistory(String userId, String historyCode, boolean isHistory);
 
     List<String> getHistoryCodeList(String userId);
 }

@@ -16,6 +16,7 @@ public class History {
     private String userId;
     private String historyCode;
     private String historyJson;
+    private String requestJson;
     private Date createTime;
     private Date updateTime;
 }
