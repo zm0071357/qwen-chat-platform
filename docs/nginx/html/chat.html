@@ -142,6 +142,21 @@
           </div>
         </div>
 
+        <!-- 在input-controls部分添加视频创作模式按钮组 -->
+        <div class="action-buttons" id="videoActionButtons" style="display: none;">
+          <button class="action-btn" id="firstFrameButton">
+            <i class="fas fa-image"></i>
+            <span>上传首帧</span>
+          </button>
+          <input type="file" id="firstFrameInput" style="display: none;" accept="image/*">
+
+          <button class="action-btn" id="lastFrameButton">
+            <i class="fas fa-image"></i>
+            <span>上传尾帧</span>
+          </button>
+          <input type="file" id="lastFrameInput" style="display: none;" accept="image/*">
+        </div>
+
         <button class="send-btn" id="sendButton">
           <i class="fas fa-paper-plane"></i> 发送
         </button>

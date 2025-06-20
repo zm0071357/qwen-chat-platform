@@ -286,19 +286,35 @@ menuItems.forEach(item => {
             // 隐藏默认按钮组，显示图片创作按钮组
             defaultActionButtons.style.display = 'none';
             imageActionButtons.style.display = 'flex';
+            videoActionButtons.style.display = 'none'; // 确保视频按钮隐藏
             addMessage("您已切换到图片创作模式。请按需选择功能后，描述您想要生成的图片内容，例如：'一份薯条'", 'ai');
         } else if(menuText === '代码助手') {
             // 显示默认按钮组，隐藏图片创作按钮组
             defaultActionButtons.style.display = 'flex';
             imageActionButtons.style.display = 'none';
+            videoActionButtons.style.display = 'none'; // 确保视频按钮隐藏
             addMessage("您已切换到代码助手模式。请描述您的编程需求，例如：'用Java写一个冒泡排序'", 'ai');
         } else if(menuText === '视频创作') {
-            defaultActionButtons.style.display = 'flex';
+            // 隐藏默认按钮组，显示视频创作按钮组
+            defaultActionButtons.style.display = 'none';
             imageActionButtons.style.display = 'none';
-            addMessage("您已切换到视频创作模式。请描述您想要生成的视频内容，例如：'一只小猫在草地上奔跑'", 'ai');
+            videoActionButtons.style.display = 'flex';
+
+            // 重置帧URL
+            firstFrameUrl = null;
+            lastFrameUrl = null;
+
+            // 更新按钮状态
+            document.getElementById('firstFrameButton').innerHTML = '<i class="fas fa-image"></i> 上传首帧';
+            document.getElementById('firstFrameButton').classList.remove('active');
+            document.getElementById('lastFrameButton').innerHTML = '<i class="fas fa-image"></i> 上传尾帧';
+            document.getElementById('lastFrameButton').classList.remove('active');
+
+            addMessage("您已切换到视频创作模式。请上传首帧和尾帧图片，然后描述您想要生成的视频内容，例如：'一只小猫在草地上奔跑'", 'ai');
         } else if(menuText === '新对话') {
             defaultActionButtons.style.display = 'flex';
             imageActionButtons.style.display = 'none';
+            videoActionButtons.style.display = 'none'; // 确保视频按钮隐藏
             startNewConversation();
         }
     });
@@ -332,6 +348,11 @@ function startNewConversation() {
     // 重置按钮状态
     ratioButton.disabled = true;
     referenceImageButton.disabled = true;
+    // 重置视频按钮
+    document.getElementById('firstFrameButton').innerHTML = '<i class="fas fa-image"></i> 上传首帧';
+    document.getElementById('firstFrameButton').classList.remove('active');
+    document.getElementById('lastFrameButton').innerHTML = '<i class="fas fa-image"></i> 上传尾帧';
+    document.getElementById('lastFrameButton').classList.remove('active');
 
     // 添加欢迎消息
     setTimeout(() => {
@@ -506,7 +527,8 @@ async function sendMessage() {
 
     // 获取当前模式
     const activeMenuItem = document.querySelector('.menu-item.active span').textContent;
-    currentMode = activeMenuItem === '图片创作' ? 'image' : 'default';
+    currentMode = activeMenuItem === '图片创作' ? 'image' :
+        activeMenuItem === '视频创作' ? 'video' : 'default';
 
     // 图片创作模式处理
     if (currentMode === 'image') {
@@ -613,7 +635,104 @@ async function sendMessage() {
             updateControlsState();
         }
         return;
-    } else {
+    }
+
+    // 视频创作模式处理
+    if (currentMode === 'video') {
+        const message = messageInput.value.trim();
+
+        // // 验证是否上传了首帧和尾帧
+        // if (!firstFrameUrl || !lastFrameUrl) {
+        //     showNotification('请上传首帧和尾帧图片', 'error');
+        //     return;
+        // }
+
+        // 显示正在输入指示器
+        typingIndicator.style.display = 'block';
+        sendButton.disabled = true;
+
+        // 构建请求数据
+        const requestData = {
+            userId: userId,
+            history_code: currentHistoryCode || `历史记录${historyCodesList.length + 1}`,
+            content: message,
+            firstFrameUrl: firstFrameUrl,
+            lastFrameUrl: lastFrameUrl
+        };
+
+        try {
+            // 发送请求
+            const token = localStorage.getItem('token') || "";
+            const tokenName = localStorage.getItem('tokenName') || "";
+
+            const response = await fetch('http://localhost:8097/create/video', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [tokenName]: token
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            const result = await response.json();
+
+            if (result.code === '0' && result.data && result.data.url) {
+                // 创建AI消息展示生成的视频
+                const videoUrl = result.data.url;
+
+                // 创建AI消息元素
+                const messageData = createAIMessageElement();
+                const contentElement = messageData.contentElement;
+
+                // 创建视频容器
+                const videoContainer = document.createElement('div');
+                videoContainer.className = 'generated-video-container';
+                videoContainer.style.textAlign = 'center';
+                videoContainer.style.marginTop = '15px';
+
+                // 创建视频元素
+                const video = document.createElement('video');
+                video.src = videoUrl;
+                video.controls = true;
+                video.className = 'generated-video';
+                video.style.maxWidth = '100%';
+                video.style.borderRadius = '10px';
+                video.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.1)';
+
+                // 添加到容器
+                videoContainer.appendChild(video);
+                contentElement.appendChild(videoContainer);
+
+                // 将整个消息元素添加到聊天容器
+                chatContainer.appendChild(messageData.messageElement);
+
+                // 平滑滚动到底部
+                smoothScrollToBottom();
+            } else {
+                addMessage(`<span style="color: red;">视频创作失败: ${result.info || '未知错误'}</span>`, 'ai');
+            }
+        } catch (error) {
+            addMessage(`<span style="color: red;">视频创作失败: ${error.message}</span>`, 'ai');
+        } finally {
+            typingIndicator.style.display = 'none';
+            sendButton.disabled = false;
+            isStreaming = false;
+
+            // 清空文件预览
+            filePreview.innerHTML = '';
+            firstFrameUrl = null;
+            lastFrameUrl = null;
+
+            // 更新按钮状态
+            document.getElementById('firstFrameButton').innerHTML = '<i class="fas fa-image"></i> 上传首帧';
+            document.getElementById('firstFrameButton').classList.remove('active');
+            document.getElementById('lastFrameButton').innerHTML = '<i class="fas fa-image"></i> 上传尾帧';
+            document.getElementById('lastFrameButton').classList.remove('active');
+        }
+        return;
+    }
+
+    else {
         // 默认聊天模式
         if (!message && fileUrls.length === 0) return;
 
@@ -1031,7 +1150,140 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 参考图上传处理
     document.getElementById('referenceImageInput').addEventListener('change', handleReferenceImageUpload);
+
+    // 视频创作模式按钮事件
+    document.getElementById('firstFrameButton').addEventListener('click', () => {
+        document.getElementById('firstFrameInput').click();
+    });
+
+    document.getElementById('lastFrameButton').addEventListener('click', () => {
+        document.getElementById('lastFrameInput').click();
+    });
+
+    // 首帧上传处理
+    document.getElementById('firstFrameInput').addEventListener('change', (e) => {
+        handleFrameUpload(e, 'first');
+    });
+
+    // 尾帧上传处理
+    document.getElementById('lastFrameInput').addEventListener('change', (e) => {
+        handleFrameUpload(e, 'last');
+    });
+
+
 });
+
+// 添加视频帧上传处理函数
+async function handleFrameUpload(e, frameType) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    const filePreview = document.getElementById('filePreview');
+    const buttonId = frameType === 'first' ? 'firstFrameButton' : 'lastFrameButton';
+    const button = document.getElementById(buttonId);
+
+    // 检查文件类型
+    if (!file.type.startsWith('image/')) {
+        showNotification('请上传图片文件', 'error');
+        return;
+    }
+
+    const token = localStorage.getItem('token') || "";
+    const tokenName = localStorage.getItem('tokenName') || "";
+    const userId = localStorage.getItem('userId');
+
+    // 显示上传中
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
+    button.disabled = true;
+
+    // 创建预览容器
+    const previewContainer = document.createElement('div');
+    previewContainer.className = 'video-frame-preview';
+
+    const previewItem = document.createElement('div');
+    previewItem.className = 'video-frame-item';
+
+    // 显示临时预览
+    previewItem.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;height:100%;">
+      <i class="fas fa-spinner fa-spin"></i>
+    </div>
+    <div class="remove-btn"><i class="fas fa-times"></i></div>
+  `;
+
+    previewContainer.appendChild(previewItem);
+    filePreview.appendChild(previewContainer);
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('userId', userId);
+
+    try {
+        const response = await fetch('http://localhost:8097/create/upload_image', {
+            method: 'POST',
+            headers: {
+                [tokenName]: token
+            },
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.code === '0' && result.data && result.data.url) {
+            const url = result.data.url;
+
+            // 存储URL
+            if (frameType === 'first') {
+                firstFrameUrl = url;
+            } else {
+                lastFrameUrl = url;
+            }
+
+            // 更新预览
+            previewItem.innerHTML = `
+        <img src="${url}" alt="${file.name}">
+        <div class="remove-btn"><i class="fas fa-times"></i></div>
+      `;
+
+            // 添加删除事件
+            previewItem.querySelector('.remove-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                previewContainer.remove();
+                button.innerHTML = `<i class="fas fa-image"></i> 上传${frameType === 'first' ? '首帧' : '尾帧'}`;
+                button.classList.remove('active');
+
+                if (frameType === 'first') {
+                    firstFrameUrl = null;
+                } else {
+                    lastFrameUrl = null;
+                }
+            });
+
+            // 添加点击预览事件
+            previewItem.addEventListener('click', () => {
+                previewImage.src = url;
+                imagePreviewModal.style.display = 'block';
+            });
+
+            button.innerHTML = `<i class="fas fa-check"></i> ${frameType === 'first' ? '首帧' : '尾帧'}已上传`;
+            button.classList.add('active');
+            showNotification(`${frameType === 'first' ? '首帧' : '尾帧'}上传成功`, 'success');
+        } else {
+            showNotification(`${frameType === 'first' ? '首帧' : '尾帧'}上传失败: ${result.info || '未知错误'}`, 'error');
+            previewContainer.remove();
+            button.innerHTML = `<i class="fas fa-image"></i> 上传${frameType === 'first' ? '首帧' : '尾帧'}`;
+        }
+    } catch (error) {
+        showNotification(`${frameType === 'first' ? '首帧' : '尾帧'}上传失败: ${error.message}`, 'error');
+        previewContainer.remove();
+        button.innerHTML = `<i class="fas fa-image"></i> 上传${frameType === 'first' ? '首帧' : '尾帧'}`;
+        console.error('上传错误:', error);
+    } finally {
+        button.disabled = false;
+        e.target.value = '';
+    }
+}
 
 // 添加历史记录码获取功能
 async function fetchHistoryCodes() {
