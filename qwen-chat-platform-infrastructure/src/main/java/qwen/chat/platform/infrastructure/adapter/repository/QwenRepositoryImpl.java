@@ -74,20 +74,22 @@ public class QwenRepositoryImpl implements QwenRepository {
     public List<ChatRequest.Input.Message> getHistory(String userId, String historyCode, boolean isHistory) {
         History history = isHistory ? qwenDao.getHistory(userId, historyCode) : qwenDao.getRequestHistory(userId, historyCode);
         if (history == null) {
-            List<ChatRequest.Input.Message> messages = new ArrayList<>();
+            List<ChatRequest.Input.Message> historyMessages = new ArrayList<>();
+            List<ChatRequest.Input.Message> requestMessages = new ArrayList<>();
+            // 系统默认消息
             List<ChatRequest.Input.Message.Content> systemContent = new ArrayList<>();
             systemContent.add(ChatRequest.Input.Message.Content.builder().text(MessageConstant.DEFAULT_MESSAGE).build());
-            messages.add(ChatRequest.Input.Message.builder()
+            requestMessages.add(ChatRequest.Input.Message.builder()
                     .role(RoleConstant.SYSTEM)
                     .content(systemContent)
                     .build());
             qwenDao.insert(History.builder()
                     .userId(userId)
                     .historyCode(historyCode)
-                    .requestJson(JSON.toJSONString(messages))
-                    .historyJson(JSON.toJSONString(messages))
+                    .historyJson(JSON.toJSONString(historyMessages))
+                    .requestJson(JSON.toJSONString(requestMessages))
                     .build());
-            return messages;
+            return isHistory ? historyMessages : requestMessages;
         }
         return JSON.parseArray(isHistory ? history.getHistoryJson() : history.getRequestJson(), ChatRequest.Input.Message.class);
     }
@@ -145,7 +147,9 @@ public class QwenRepositoryImpl implements QwenRepository {
     }
 
     @Override
-    public ResponseBodyEmitter chatWithFile(List<ChatRequest.Input.Message> historyMessages, List<ChatRequest.Input.Message> requestHistoryMessages, PreRequestEntity preRequestEntity) {
+    public ResponseBodyEmitter chatWithFile(List<ChatRequest.Input.Message> historyMessages,
+                                            List<ChatRequest.Input.Message> requestHistoryMessages,
+                                            PreRequestEntity preRequestEntity) {
         List<String> fileList = preRequestEntity.getFileList();
         Set<FileTypeEnum> mediaTypes = new HashSet<>();
         for (String file : fileList) {
